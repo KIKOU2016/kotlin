@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.fir.FirElement
+import org.jetbrains.kotlin.fir.FirFunctionTarget
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.impl.*
@@ -36,7 +37,7 @@ import org.jetbrains.kotlin.psi.psiUtil.hasActualModifier
 import org.jetbrains.kotlin.psi.psiUtil.hasExpectModifier
 import org.jetbrains.kotlin.types.Variance
 
-class RawFirBuilder(val session: FirSession) {
+class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
 
     private val implicitUnitType = FirImplicitUnitType(session, null)
 
@@ -86,11 +87,41 @@ class RawFirBuilder(val session: FirSession) {
         private fun KtTypeReference?.toFirOrErrorType(): FirType =
             convertSafe() ?: FirErrorTypeImpl(session, this, if (this == null) "Incomplete code" else "Conversion failed")
 
+        // Here and below we accept lambda as receiver
+        // to prevent expression calculation in stub mode
+        private fun (() -> KtExpression?).toFirExpression(errorReason: String): FirExpression =
+            if (stubMode) FirExpressionStub(session, null)
+            else with(this()) {
+                convertSafe<FirExpression>() ?: FirErrorExpressionImpl(session, this, errorReason)
+            }
+
+        private fun (() -> KtExpression).toFirExpression(): FirExpression =
+            if (stubMode) FirExpressionStub(session, null)
+            else this().convert<FirExpression>()
+
+        private fun KtExpression.toFirExpression(): FirExpression =
+            if (stubMode) FirExpressionStub(session, null) else convert<FirExpression>()
+
         private fun KtDeclarationWithBody.buildFirBody(): FirBlock? =
             when {
-                !hasBody() -> null
-                hasBlockBody() -> FirBlockImpl(session, this)
-                else -> FirSingleExpressionBlock(session, FirExpressionStub(session, null))
+                !hasBody() ->
+                    null
+                hasBlockBody() ->
+                    bodyBlockExpression?.accept(this@Visitor, Unit) as? FirBlock
+                else -> {
+                    val result = { bodyExpression }.toFirExpression("Function has no body (but should)")
+                    FirSingleExpressionBlock(
+                        session,
+                        FirReturnStatementImpl(
+                            session,
+                            result.psi,
+                            result
+                        ).apply {
+                            target = FirFunctionTarget(labelName = null)
+                            target.bind(firFunctions.last())
+                        }
+                    )
+                }
             }
 
         private fun String.parseCharacter(): Char? {
@@ -163,56 +194,14 @@ class RawFirBuilder(val session: FirSession) {
         private fun ValueArgument?.toFirExpression(): FirExpression {
             this ?: return FirErrorExpressionImpl(session, this as? KtElement, "No argument given")
             val expression = this.getArgumentExpression()
-            when (expression) {
-                is KtConstantExpression -> {
-                    val type = expression.node.elementType
-                    val text: String = expression.text
-                    return when (type) {
-                        KtNodeTypes.INTEGER_CONSTANT ->
-                            if (text.last() == 'l' || text.last() == 'L') {
-                                FirConstExpressionImpl(
-                                    session, expression, IrConstKind.Long, text.dropLast(1).toLongOrNull(), "Incorrect long: $text"
-                                )
-                            } else {
-                                // TODO: support byte / short
-                                FirConstExpressionImpl(session, expression, IrConstKind.Int, text.toIntOrNull(), "Incorrect int: $text")
-                            }
-                        KtNodeTypes.FLOAT_CONSTANT ->
-                            if (text.last() == 'f' || text.last() == 'F') {
-                                FirConstExpressionImpl(
-                                    session, expression, IrConstKind.Float, text.dropLast(1).toFloatOrNull(), "Incorrect float: $text"
-                                )
-                            } else {
-                                FirConstExpressionImpl(
-                                    session, expression, IrConstKind.Double, text.toDoubleOrNull(), "Incorrect double: $text"
-                                )
-                            }
-                        KtNodeTypes.CHARACTER_CONSTANT ->
-                            FirConstExpressionImpl(
-                                session, expression, IrConstKind.Char, text.parseCharacter(), "Incorrect character: $text"
-                            )
-                        KtNodeTypes.BOOLEAN_CONSTANT ->
-                            FirConstExpressionImpl(session, expression, IrConstKind.Boolean, text.toBoolean())
-                        KtNodeTypes.NULL ->
-                            FirConstExpressionImpl(session, expression, IrConstKind.Null, null)
-                        else ->
-                            throw AssertionError("Unknown literal type: $type, $text")
-                    }
+            return when (expression) {
+                is KtConstantExpression, is KtStringTemplateExpression -> {
+                    expression.accept(this@Visitor, Unit) as FirExpression
                 }
 
-                is KtStringTemplateExpression -> {
-                    val sb = StringBuilder()
-                    for (entry in expression.entries) {
-                        when (entry) {
-                            is KtLiteralStringTemplateEntry -> sb.append(entry.text)
-                            is KtEscapeStringTemplateEntry -> sb.append(entry.unescapedValue)
-                            else -> return FirErrorExpressionImpl(session, expression, "Incorrect template entry: ${entry.text}")
-                        }
-                    }
-                    return FirConstExpressionImpl(session, expression, IrConstKind.String, sb.toString())
+                else -> {
+                    { expression }.toFirExpression("Argument is absent")
                 }
-
-                else -> return FirExpressionStub(session, this as? KtElement)
             }
         }
 
@@ -237,14 +226,16 @@ class RawFirBuilder(val session: FirSession) {
                     returnTypeReference?.convertSafe() ?: propertyType
                 } else {
                     returnTypeReference.toFirOrUnitType()
-                },
-                this.buildFirBody()
+                }
             )
+            firFunctions += firAccessor
             extractAnnotationsTo(firAccessor)
             extractValueParametersTo(firAccessor, propertyType)
             if (!isGetter && firAccessor.valueParameters.isEmpty()) {
                 firAccessor.valueParameters += FirDefaultSetterValueParameter(session, this, propertyType)
             }
+            firAccessor.body = this.buildFirBody()
+            firFunctions.removeLast()
             return firAccessor
         }
 
@@ -258,7 +249,9 @@ class RawFirBuilder(val session: FirSession) {
                     defaultType != null -> defaultType
                     else -> null.toFirOrErrorType()
                 },
-                if (hasDefaultValue()) FirExpressionStub(session, this) else null,
+                if (hasDefaultValue()) {
+                    { defaultValue }.toFirExpression("Should have default value")
+                } else null,
                 isCrossinline = hasModifier(KtTokens.CROSSINLINE_KEYWORD),
                 isNoinline = hasModifier(KtTokens.NOINLINE_KEYWORD),
                 isVararg = isVarArg
@@ -527,6 +520,12 @@ class RawFirBuilder(val session: FirSession) {
             }
         }
 
+        private val firFunctions = mutableListOf<FirFunction>()
+
+        private fun <T> MutableList<T>.removeLast() {
+            removeAt(size - 1)
+        }
+
         override fun visitNamedFunction(function: KtNamedFunction, data: Unit): FirElement {
             if (function.name == null) {
                 // TODO: return anonymous function here
@@ -554,14 +553,16 @@ class RawFirBuilder(val session: FirSession) {
                     typeReference.toFirOrUnitType()
                 } else {
                     typeReference.toFirOrImplicitType()
-                },
-                function.buildFirBody()
+                }
             )
+            firFunctions += firFunction
             function.extractAnnotationsTo(firFunction)
             function.extractTypeParametersTo(firFunction)
             for (valueParameter in function.valueParameters) {
                 firFunction.valueParameters += valueParameter.convert<FirValueParameter>()
             }
+            firFunction.body = function.buildFirBody()
+            firFunctions.removeLast()
             return firFunction
         }
 
@@ -577,11 +578,13 @@ class RawFirBuilder(val session: FirSession) {
                 hasExpectModifier(),
                 hasActualModifier(),
                 delegatedSelfType,
-                getDelegationCall().convert(delegatedSuperType, delegatedSelfType, hasPrimaryConstructor),
-                buildFirBody()
+                getDelegationCall().convert(delegatedSuperType, delegatedSelfType, hasPrimaryConstructor)
             )
+            firFunctions += firConstructor
             extractAnnotationsTo(firConstructor)
             extractValueParametersTo(firConstructor)
+            firConstructor.body = buildFirBody()
+            firFunctions.removeLast()
             return firConstructor
         }
 
@@ -752,7 +755,75 @@ class RawFirBuilder(val session: FirSession) {
             parameter.toFirValueParameter()
 
         override fun visitBlockExpression(expression: KtBlockExpression, data: Unit): FirElement {
-            return FirBlockImpl(session, expression)
+            return FirBlockImpl(session, expression).apply {
+                for (statement in expression.statements) {
+                    statements += { statement }.toFirExpression()
+                }
+            }
+        }
+
+        override fun visitConstantExpression(expression: KtConstantExpression, data: Unit): FirElement {
+            val type = expression.node.elementType
+            val text: String = expression.text
+            return when (type) {
+                KtNodeTypes.INTEGER_CONSTANT ->
+                    if (text.last() == 'l' || text.last() == 'L') {
+                        FirConstExpressionImpl(
+                            session, expression, IrConstKind.Long, text.dropLast(1).toLongOrNull(), "Incorrect long: $text"
+                        )
+                    } else {
+                        // TODO: support byte / short
+                        FirConstExpressionImpl(session, expression, IrConstKind.Int, text.toIntOrNull(), "Incorrect int: $text")
+                    }
+                KtNodeTypes.FLOAT_CONSTANT ->
+                    if (text.last() == 'f' || text.last() == 'F') {
+                        FirConstExpressionImpl(
+                            session, expression, IrConstKind.Float, text.dropLast(1).toFloatOrNull(), "Incorrect float: $text"
+                        )
+                    } else {
+                        FirConstExpressionImpl(
+                            session, expression, IrConstKind.Double, text.toDoubleOrNull(), "Incorrect double: $text"
+                        )
+                    }
+                KtNodeTypes.CHARACTER_CONSTANT ->
+                    FirConstExpressionImpl(
+                        session, expression, IrConstKind.Char, text.parseCharacter(), "Incorrect character: $text"
+                    )
+                KtNodeTypes.BOOLEAN_CONSTANT ->
+                    FirConstExpressionImpl(session, expression, IrConstKind.Boolean, text.toBoolean())
+                KtNodeTypes.NULL ->
+                    FirConstExpressionImpl(session, expression, IrConstKind.Null, null)
+                else ->
+                    throw AssertionError("Unknown literal type: $type, $text")
+            }
+        }
+
+        override fun visitStringTemplateExpression(expression: KtStringTemplateExpression, data: Unit): FirElement {
+            val sb = StringBuilder()
+            for (entry in expression.entries) {
+                when (entry) {
+                    is KtLiteralStringTemplateEntry -> sb.append(entry.text)
+                    is KtEscapeStringTemplateEntry -> sb.append(entry.unescapedValue)
+                    else -> return FirErrorExpressionImpl(session, expression, "Incorrect template entry: ${entry.text}")
+                }
+            }
+            return FirConstExpressionImpl(session, expression, IrConstKind.String, sb.toString())
+        }
+
+        override fun visitReturnExpression(expression: KtReturnExpression, data: Unit): FirElement {
+            return FirReturnStatementImpl(
+                session,
+                expression,
+                expression.returnedExpression?.toFirExpression() ?: FirUnitExpression(session, expression)
+            ).apply {
+                val labelName = expression.getTargetLabel()?.getReferencedName()
+                target = FirFunctionTarget(labelName)
+                if (labelName == null) {
+                    target.bind(firFunctions.last())
+                } else {
+                    // TODO
+                }
+            }
         }
 
         override fun visitExpression(expression: KtExpression, data: Unit): FirElement {

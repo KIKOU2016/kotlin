@@ -131,4 +131,22 @@ public class RawFirBuilderTestCaseGenerated extends AbstractRawFirBuilderTestCas
             runTest("compiler/fir/psi2fir/testData/rawBuilder/declarations/typeParameters.kt");
         }
     }
+
+    @TestMetadata("compiler/fir/psi2fir/testData/rawBuilder/expressions")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Expressions extends AbstractRawFirBuilderTestCase {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest(this::doRawFirTest, TargetBackend.ANY, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInExpressions() throws Exception {
+            KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/fir/psi2fir/testData/rawBuilder/expressions"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
+        }
+
+        @TestMetadata("simpleReturns.kt")
+        public void testSimpleReturns() throws Exception {
+            runTest("compiler/fir/psi2fir/testData/rawBuilder/expressions/simpleReturns.kt");
+        }
+    }
 }

@@ -17,7 +17,7 @@ import kotlin.system.measureNanoTime
 @RunWith(JUnit3RunnerWithInners::class)
 class RawFirBuilderTotalKotlinTestCase : AbstractRawFirBuilderTestCase() {
 
-    fun testTotalKotlin() {
+    private fun testTotalKotlinWithGivenMode(stubMode: Boolean) {
         val root = File(testDataPath)
         var counter = 0
         var time = 0L
@@ -31,12 +31,14 @@ class RawFirBuilderTotalKotlinTestCase : AbstractRawFirBuilderTestCase() {
                 val ktFile = createKtFile(file.toRelativeString(root))
                 var firFile: FirFile? = null
                 time += measureNanoTime {
-                    firFile = ktFile.toFirFile()
+                    firFile = ktFile.toFirFile(stubMode)
                 }
                 totalLength += StringBuilder().also { FirRenderer(it).visitFile(firFile!!) }.length
                 counter++
             } catch (e: Exception) {
-                println("TIME PER FILE: ${(time / counter) * 1e-6} ms, COUNTER: $counter")
+                if (counter > 0) {
+                    println("TIME PER FILE: ${(time / counter) * 1e-6} ms, COUNTER: $counter")
+                }
                 println("EXCEPTION in: " + file.toRelativeString(root))
                 throw e
             }
@@ -46,6 +48,15 @@ class RawFirBuilderTotalKotlinTestCase : AbstractRawFirBuilderTestCase() {
         println("TIME PER FILE: ${(time / counter) * 1e-6} ms, COUNTER: $counter")
     }
 
+    // This test does not pass yet
+    fun testTotalKotlinWithExpressionTrees() {
+        testTotalKotlinWithGivenMode(stubMode = false)
+    }
+
+    fun testTotalKotlinWithDeclarationsOnly() {
+        testTotalKotlinWithGivenMode(stubMode = true)
+    }
+
     fun testVisitConsistency() {
         val root = File(testDataPath)
         for (file in root.walkTopDown()) {
@@ -53,7 +64,7 @@ class RawFirBuilderTotalKotlinTestCase : AbstractRawFirBuilderTestCase() {
             if (file.path.contains("testData") || file.path.contains("resources")) continue
             if (file.extension != "kt") continue
             val ktFile = createKtFile(file.toRelativeString(root))
-            val firFile = ktFile.toFirFile()
+            val firFile = ktFile.toFirFile(stubMode = true)
             try {
                 firFile.checkChildren()
             } catch (e: Throwable) {
@@ -70,7 +81,7 @@ class RawFirBuilderTotalKotlinTestCase : AbstractRawFirBuilderTestCase() {
             if (file.path.contains("testData") || file.path.contains("resources")) continue
             if (file.extension != "kt") continue
             val ktFile = createKtFile(file.toRelativeString(root))
-            val firFile = ktFile.toFirFile()
+            val firFile = ktFile.toFirFile(stubMode = true)
             try {
                 firFile.checkTransformedChildren()
             } catch (e: Throwable) {

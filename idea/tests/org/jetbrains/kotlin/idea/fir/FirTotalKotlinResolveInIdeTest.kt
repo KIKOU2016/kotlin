@@ -14,7 +14,6 @@ import com.intellij.testFramework.ModuleTestCase
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.builder.RawFirBuilder
 import org.jetbrains.kotlin.fir.declarations.FirFile
-import org.jetbrains.kotlin.fir.dependenciesWithoutSelf
 import org.jetbrains.kotlin.fir.doFirResolveTestBench
 import org.jetbrains.kotlin.fir.java.FirJavaModuleBasedSession
 import org.jetbrains.kotlin.fir.java.FirProjectSessionProvider
@@ -73,7 +72,7 @@ class FirTotalKotlinResolveInIdeTest : ModuleTestCase() {
         val session = createSession()
 
         val firFiles = mutableListOf<FirFile>()
-        val builder = RawFirBuilder(session)
+        val builder = RawFirBuilder(session, stubMode = true)
         val psiManager = PsiManager.getInstance(project)
 
         val files = FileTypeIndex.getFiles(KotlinFileType.INSTANCE, GlobalSearchScope.moduleScope(module))

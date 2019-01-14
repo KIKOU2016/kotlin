@@ -27,13 +27,14 @@ open class FirConstructorImpl(
     isExpect: Boolean,
     isActual: Boolean,
     delegatedSelfType: FirType,
-    final override var delegatedConstructor: FirDelegatedConstructorCall?,
-    override val body: FirBlock?
+    final override var delegatedConstructor: FirDelegatedConstructorCall?
 ) : FirAbstractCallableMember(
     session, psi, NAME, visibility, Modality.FINAL,
     isExpect, isActual, isOverride = false, receiverType = null, returnType = delegatedSelfType
 ), FirConstructor {
     override val valueParameters = mutableListOf<FirValueParameter>()
+
+    override var body: FirBlock? = null
 
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirElement {
         valueParameters.transformInplace(transformer, data)

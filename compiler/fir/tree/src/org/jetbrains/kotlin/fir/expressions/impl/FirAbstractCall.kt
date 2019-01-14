@@ -14,9 +14,9 @@ import org.jetbrains.kotlin.fir.transformInplace
 import org.jetbrains.kotlin.fir.visitors.FirTransformer
 
 abstract class FirAbstractCall(
-    final override val session: FirSession,
-    final override val psi: PsiElement?
-) : FirCall {
+    session: FirSession,
+    psi: PsiElement?
+) : FirAbstractExpression(session, psi), FirCall {
     final override val arguments = mutableListOf<FirExpression>()
 
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirElement {

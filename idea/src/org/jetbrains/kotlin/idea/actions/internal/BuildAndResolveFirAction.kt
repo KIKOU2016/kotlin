@@ -73,7 +73,7 @@ class BuildAndResolveFirAction : AnAction() {
             for (moduleInfo in listOfNotNull(module.productionSourceInfo(), module.testSourceInfo())) {
                 val session = createSession(moduleInfo, provider)
 
-                val builder = RawFirBuilder(session)
+                val builder = RawFirBuilder(session, stubMode = true)
                 val psiManager = PsiManager.getInstance(project)
 
                 val ideaModuleInfo = session.moduleInfo.cast<IdeaModuleInfo>()

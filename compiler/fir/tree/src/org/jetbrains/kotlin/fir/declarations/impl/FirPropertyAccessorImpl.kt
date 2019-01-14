@@ -21,9 +21,8 @@ class FirPropertyAccessorImpl(
     psi: PsiElement?,
     override val isGetter: Boolean,
     visibility: Visibility,
-    override var returnType: FirType,
-    body: FirBlock?
-) : FirAbstractFunction(session, psi, body), FirPropertyAccessor {
+    override var returnType: FirType
+) : FirAbstractFunction(session, psi), FirPropertyAccessor {
     override var status = FirDeclarationStatusImpl(
         session, visibility, Modality.FINAL
     )

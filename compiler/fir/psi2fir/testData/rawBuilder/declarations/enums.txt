@@ -31,6 +31,7 @@ FILE: enums.kt
             public? constructor(): super<Planet>()
 
             public? open? override function sayHello(): kotlin.Unit {
+                STUB
             }
 
         }
@@ -39,6 +40,7 @@ FILE: enums.kt
             public? constructor(): super<Planet>()
 
             public? open? override function sayHello(): kotlin.Unit {
+                STUB
             }
 
         }
@@ -47,6 +49,7 @@ FILE: enums.kt
             public? constructor(): super<Planet>()
 
             public? open? override function sayHello(): kotlin.Unit {
+                STUB
             }
 
         }

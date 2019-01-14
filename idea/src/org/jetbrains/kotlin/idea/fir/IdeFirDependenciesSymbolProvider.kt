@@ -47,7 +47,7 @@ class IdeFirDependenciesSymbolProvider(
             return classifier
         }
 
-        val builder = RawFirBuilder(session)
+        val builder = RawFirBuilder(session, stubMode = true)
         impl.recordFile(builder.buildFirFile(file))
         return impl.getSymbolByFqName(classId)
     }

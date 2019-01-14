@@ -4,6 +4,7 @@ FILE: noPrimaryConstructor.kt
             public? get(): String
 
         public? constructor(x: String): super<kotlin.Any>() {
+            STUB
         }
 
         public? constructor(): this<NoPrimary>()
