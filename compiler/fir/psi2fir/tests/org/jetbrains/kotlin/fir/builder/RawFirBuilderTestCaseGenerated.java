@@ -144,6 +144,11 @@ public class RawFirBuilderTestCaseGenerated extends AbstractRawFirBuilderTestCas
             KotlinTestUtils.assertAllTestsPresentByMetadata(this.getClass(), new File("compiler/fir/psi2fir/testData/rawBuilder/expressions"), Pattern.compile("^(.+)\\.kt$"), TargetBackend.ANY, true);
         }
 
+        @TestMetadata("branches.kt")
+        public void testBranches() throws Exception {
+            runTest("compiler/fir/psi2fir/testData/rawBuilder/expressions/branches.kt");
+        }
+
         @TestMetadata("simpleReturns.kt")
         public void testSimpleReturns() throws Exception {
             runTest("compiler/fir/psi2fir/testData/rawBuilder/expressions/simpleReturns.kt");

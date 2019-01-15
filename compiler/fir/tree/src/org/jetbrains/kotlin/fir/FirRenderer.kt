@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.expressions.*
+import org.jetbrains.kotlin.fir.expressions.impl.FirElseIfTrueCondition
 import org.jetbrains.kotlin.fir.expressions.impl.FirExpressionStub
 import org.jetbrains.kotlin.fir.expressions.impl.FirUnitExpression
 import org.jetbrains.kotlin.fir.symbols.ConeClassLikeSymbol
@@ -375,6 +376,37 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
         }
         print(" ")
         returnStatement.result.accept(this)
+    }
+
+    override fun visitWhenBranch(whenBranch: FirWhenBranch) {
+        val condition = whenBranch.condition
+        if (condition is FirElseIfTrueCondition) {
+            print("else")
+        } else {
+            condition.accept(this)
+        }
+        print(" -> ")
+        whenBranch.result.accept(this)
+    }
+
+    override fun visitWhenExpression(whenExpression: FirWhenExpression) {
+        print("when (")
+        val subjectVariable = whenExpression.subjectVariable
+        if (subjectVariable != null) {
+            subjectVariable.accept(this)
+        } else {
+            val subject = whenExpression.subject
+            if (subject != null) {
+                subject.accept(this)
+            }
+        }
+        println(") {")
+        pushIndent()
+        for (branch in whenExpression.branches) {
+            branch.accept(this)
+        }
+        popIndent()
+        println("}")
     }
 
     override fun visitExpression(expression: FirExpression) {

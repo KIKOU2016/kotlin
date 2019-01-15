@@ -15,10 +15,7 @@ import org.jetbrains.kotlin.fir.FirFunctionTarget
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.impl.*
-import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
-import org.jetbrains.kotlin.fir.expressions.FirBlock
-import org.jetbrains.kotlin.fir.expressions.FirDelegatedConstructorCall
-import org.jetbrains.kotlin.fir.expressions.FirExpression
+import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.*
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeAliasSymbol
@@ -101,6 +98,23 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
 
         private fun KtExpression.toFirExpression(): FirExpression =
             if (stubMode) FirExpressionStub(session, null) else convert<FirExpression>()
+
+        private fun KtExpression?.toFirExpression(errorReason: String): FirExpression =
+            if (stubMode) FirExpressionStub(session, null)
+            else convertSafe<FirExpression>() ?: FirErrorExpressionImpl(session, this, errorReason)
+
+        private fun KtExpression?.toFirBlock(): FirBlock =
+            when (this) {
+                is KtBlockExpression ->
+                    accept(this@Visitor, Unit) as FirBlock
+                null ->
+                    FirEmptyExpressionBlock(session)
+                else ->
+                    FirSingleExpressionBlock(
+                        session,
+                        toFirExpression()
+                    )
+            }
 
         private fun KtDeclarationWithBody.buildFirBody(): FirBlock? =
             when {
@@ -822,6 +836,47 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                     target.bind(firFunctions.last())
                 } else {
                     // TODO
+                }
+            }
+        }
+
+        override fun visitIfExpression(expression: KtIfExpression, data: Unit): FirElement {
+            return FirWhenExpressionImpl(
+                session,
+                expression
+            ).apply {
+                val condition = expression.condition
+                val firCondition = condition.toFirExpression("If statement should have condition")
+                val trueBranch = expression.then.toFirBlock()
+                branches += FirWhenBranchImpl(session, condition, firCondition, trueBranch)
+                val elseBranch = expression.`else`.toFirBlock()
+                branches += FirWhenBranchImpl(session, null, FirElseIfTrueCondition(session, null), elseBranch)
+            }
+        }
+
+        override fun visitWhenExpression(expression: KtWhenExpression, data: Unit): FirElement {
+            val subjectExpression = expression.subjectExpression
+            val subject = when (subjectExpression) {
+                is KtVariableDeclaration -> subjectExpression.initializer
+                else -> subjectExpression
+            }?.toFirExpression()
+            return FirWhenExpressionImpl(
+                session,
+                expression,
+                subject
+                // TODO: integrate subject into conditions and support subjectVariable
+            ).apply {
+                for (entry in expression.entries) {
+                    branches += if (!entry.isElse) {
+                        // TODO: yet only the first condition is supported, and only with expression
+                        val condition = entry.conditions.firstOrNull() as? KtWhenConditionWithExpression
+                        val firCondition = condition?.expression.toFirExpression("When entry should have condition")
+                        val branch = entry.expression.toFirBlock()
+                        FirWhenBranchImpl(session, condition, firCondition, branch)
+                    } else {
+                        val elseBranch = entry.expression.toFirBlock()
+                        FirWhenBranchImpl(session, null, FirElseIfTrueCondition(session, null), elseBranch)
+                    }
                 }
             }
         }

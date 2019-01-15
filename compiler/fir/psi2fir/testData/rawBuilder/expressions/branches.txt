@@ -1,0 +1,37 @@
+FILE: branches.kt
+    public? final? function foo(a: Int, b: Int): <implicit> {
+        return@@@foo when () {
+            STUB ->  {
+                STUB
+            }
+            else ->  {
+                STUB
+            }
+        }
+
+    }
+    public? final? function bar(a: Double, b: Double): Double {
+        when () {
+            STUB ->  {
+                STUB
+                return@@@bar STUB
+            }
+            else ->  {
+                STUB
+                return@@@bar STUB
+            }
+        }
+
+    }
+    public? final? function baz(a: Long, b: Long): Long {
+        when () {
+            STUB ->  {
+                STUB
+                return@@@baz STUB
+            }
+            else ->  {
+                return@@@baz STUB
+            }
+        }
+
+    }
