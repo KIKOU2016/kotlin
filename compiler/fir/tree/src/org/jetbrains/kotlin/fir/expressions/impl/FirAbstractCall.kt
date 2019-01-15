@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.fir.expressions.impl
 
 import com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.fir.FirAbstractElement
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.expressions.FirCall
@@ -16,7 +17,7 @@ import org.jetbrains.kotlin.fir.visitors.FirTransformer
 abstract class FirAbstractCall(
     session: FirSession,
     psi: PsiElement?
-) : FirAbstractExpression(session, psi), FirCall {
+) : FirAbstractElement(session, psi), FirCall {
     final override val arguments = mutableListOf<FirExpression>()
 
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirElement {

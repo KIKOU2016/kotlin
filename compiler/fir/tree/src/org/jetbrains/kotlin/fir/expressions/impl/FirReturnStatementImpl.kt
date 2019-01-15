@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.fir.expressions.impl
 
 import com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.fir.FirAbstractElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.FirTarget
 import org.jetbrains.kotlin.fir.declarations.FirFunction
@@ -16,6 +17,6 @@ class FirReturnStatementImpl(
     session: FirSession,
     psi: PsiElement?,
     override val result: FirExpression
-) : FirAbstractExpression(session, psi), FirReturnStatement {
+) : FirAbstractElement(session, psi), FirReturnStatement {
     override lateinit var target: FirTarget<FirFunction>
 }

@@ -12,6 +12,10 @@ import org.jetbrains.kotlin.fir.visitors.FirVisitor
 interface FirCall : FirExpression {
     val arguments: List<FirExpression>
 
+    val safe: Boolean get() = false
+
+    val explicitReceiver: FirExpression? get() = null
+
     override fun <R, D> accept(visitor: FirVisitor<R, D>, data: D): R =
         visitor.visitCall(this, data)
 

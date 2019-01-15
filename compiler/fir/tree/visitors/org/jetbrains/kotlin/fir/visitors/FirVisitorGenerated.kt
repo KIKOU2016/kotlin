@@ -114,6 +114,10 @@ abstract class FirVisitor<out R, in D> {
         return visitElement(label, data)
     }
 
+    open fun visitMemberReference(memberReference: FirMemberReference, data: D): R {
+        return visitElement(memberReference, data)
+    }
+
     open fun visitPackageFragment(packageFragment: FirPackageFragment, data: D): R {
         return visitElement(packageFragment, data)
     }
@@ -146,16 +150,24 @@ abstract class FirVisitor<out R, in D> {
         return visitCall(delegatedConstructorCall, data)
     }
 
+    open fun visitFunctionCall(functionCall: FirFunctionCall, data: D): R {
+        return visitCall(functionCall, data)
+    }
+
+    open fun visitOperatorCall(operatorCall: FirOperatorCall, data: D): R {
+        return visitCall(operatorCall, data)
+    }
+
+    open fun visitTypeOperatorCall(typeOperatorCall: FirTypeOperatorCall, data: D): R {
+        return visitOperatorCall(typeOperatorCall, data)
+    }
+
     open fun <T> visitConstExpression(constExpression: FirConstExpression<T>, data: D): R {
         return visitExpression(constExpression, data)
     }
 
     open fun visitErrorExpression(errorExpression: FirErrorExpression, data: D): R {
         return visitExpression(errorExpression, data)
-    }
-
-    open fun visitExpressionWithType(expressionWithType: FirExpressionWithType, data: D): R {
-        return visitExpression(expressionWithType, data)
     }
 
     open fun <E : FirTargetElement> visitJump(jump: FirJump<E>, data: D): R {
@@ -172,6 +184,18 @@ abstract class FirVisitor<out R, in D> {
 
     open fun visitReturnStatement(returnStatement: FirReturnStatement, data: D): R {
         return visitJump(returnStatement, data)
+    }
+
+    open fun visitMemberAccess(memberAccess: FirMemberAccess, data: D): R {
+        return visitExpression(memberAccess, data)
+    }
+
+    open fun visitPropertyGet(propertyGet: FirPropertyGet, data: D): R {
+        return visitMemberAccess(propertyGet, data)
+    }
+
+    open fun visitPropertySet(propertySet: FirPropertySet, data: D): R {
+        return visitMemberAccess(propertySet, data)
     }
 
     open fun visitThrowExpression(throwExpression: FirThrowExpression, data: D): R {

@@ -114,6 +114,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitElement(label, null)
     }
 
+    open fun visitMemberReference(memberReference: FirMemberReference) {
+        visitElement(memberReference, null)
+    }
+
     open fun visitPackageFragment(packageFragment: FirPackageFragment) {
         visitElement(packageFragment, null)
     }
@@ -146,16 +150,24 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitCall(delegatedConstructorCall, null)
     }
 
+    open fun visitFunctionCall(functionCall: FirFunctionCall) {
+        visitCall(functionCall, null)
+    }
+
+    open fun visitOperatorCall(operatorCall: FirOperatorCall) {
+        visitCall(operatorCall, null)
+    }
+
+    open fun visitTypeOperatorCall(typeOperatorCall: FirTypeOperatorCall) {
+        visitOperatorCall(typeOperatorCall, null)
+    }
+
     open fun <T> visitConstExpression(constExpression: FirConstExpression<T>) {
         visitExpression(constExpression, null)
     }
 
     open fun visitErrorExpression(errorExpression: FirErrorExpression) {
         visitExpression(errorExpression, null)
-    }
-
-    open fun visitExpressionWithType(expressionWithType: FirExpressionWithType) {
-        visitExpression(expressionWithType, null)
     }
 
     open fun <E : FirTargetElement> visitJump(jump: FirJump<E>) {
@@ -172,6 +184,18 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     open fun visitReturnStatement(returnStatement: FirReturnStatement) {
         visitJump(returnStatement, null)
+    }
+
+    open fun visitMemberAccess(memberAccess: FirMemberAccess) {
+        visitExpression(memberAccess, null)
+    }
+
+    open fun visitPropertyGet(propertyGet: FirPropertyGet) {
+        visitMemberAccess(propertyGet, null)
+    }
+
+    open fun visitPropertySet(propertySet: FirPropertySet) {
+        visitMemberAccess(propertySet, null)
     }
 
     open fun visitThrowExpression(throwExpression: FirThrowExpression) {
@@ -362,10 +386,6 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitExpression(expression)
     }
 
-    final override fun visitExpressionWithType(expressionWithType: FirExpressionWithType, data: Nothing?) {
-        visitExpressionWithType(expressionWithType)
-    }
-
     final override fun visitFile(file: FirFile, data: Nothing?) {
         visitFile(file)
     }
@@ -376,6 +396,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     final override fun visitFunction(function: FirFunction, data: Nothing?) {
         visitFunction(function)
+    }
+
+    final override fun visitFunctionCall(functionCall: FirFunctionCall, data: Nothing?) {
+        visitFunctionCall(functionCall)
     }
 
     final override fun visitFunctionType(functionType: FirFunctionType, data: Nothing?) {
@@ -410,8 +434,16 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
         visitLoopWithCondition(loopWithCondition)
     }
 
+    final override fun visitMemberAccess(memberAccess: FirMemberAccess, data: Nothing?) {
+        visitMemberAccess(memberAccess)
+    }
+
     final override fun visitMemberDeclaration(memberDeclaration: FirMemberDeclaration, data: Nothing?) {
         visitMemberDeclaration(memberDeclaration)
+    }
+
+    final override fun visitMemberReference(memberReference: FirMemberReference, data: Nothing?) {
+        visitMemberReference(memberReference)
     }
 
     final override fun visitNamedDeclaration(namedDeclaration: FirNamedDeclaration, data: Nothing?) {
@@ -420,6 +452,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     final override fun visitNamedFunction(namedFunction: FirNamedFunction, data: Nothing?) {
         visitNamedFunction(namedFunction)
+    }
+
+    final override fun visitOperatorCall(operatorCall: FirOperatorCall, data: Nothing?) {
+        visitOperatorCall(operatorCall)
     }
 
     final override fun visitPackageFragment(packageFragment: FirPackageFragment, data: Nothing?) {
@@ -432,6 +468,14 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     final override fun visitPropertyAccessor(propertyAccessor: FirPropertyAccessor, data: Nothing?) {
         visitPropertyAccessor(propertyAccessor)
+    }
+
+    final override fun visitPropertyGet(propertyGet: FirPropertyGet, data: Nothing?) {
+        visitPropertyGet(propertyGet)
+    }
+
+    final override fun visitPropertySet(propertySet: FirPropertySet, data: Nothing?) {
+        visitPropertySet(propertySet)
     }
 
     final override fun visitResolvedDeclarationStatus(resolvedDeclarationStatus: FirResolvedDeclarationStatus, data: Nothing?) {
@@ -480,6 +524,10 @@ abstract class FirVisitorVoid : FirVisitor<Unit, Nothing?>() {
 
     final override fun visitTypeAlias(typeAlias: FirTypeAlias, data: Nothing?) {
         visitTypeAlias(typeAlias)
+    }
+
+    final override fun visitTypeOperatorCall(typeOperatorCall: FirTypeOperatorCall, data: Nothing?) {
+        visitTypeOperatorCall(typeOperatorCall)
     }
 
     final override fun visitTypeParameter(typeParameter: FirTypeParameter, data: Nothing?) {

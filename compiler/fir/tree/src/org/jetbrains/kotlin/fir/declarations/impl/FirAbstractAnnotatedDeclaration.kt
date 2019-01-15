@@ -6,14 +6,15 @@
 package org.jetbrains.kotlin.fir.declarations.impl
 
 import com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.fir.FirAbstractElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
 import org.jetbrains.kotlin.fir.expressions.FirAnnotationContainer
 
 abstract class FirAbstractAnnotatedDeclaration(
-    final override val session: FirSession,
-    final override val psi: PsiElement?
-) : FirAnnotationContainer, FirDeclaration {
+    session: FirSession,
+    psi: PsiElement?
+) : FirAbstractElement(session, psi), FirAnnotationContainer, FirDeclaration {
     final override val annotations = mutableListOf<FirAnnotationCall>()
 }

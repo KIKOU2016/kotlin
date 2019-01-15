@@ -6,10 +6,12 @@
 package org.jetbrains.kotlin.fir.expressions.impl
 
 import com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.fir.FirAbstractElement
 import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.expressions.FirExpression
 
 // Representation of "dummy" condition at else branch
 class FirElseIfTrueCondition(
     session: FirSession,
     psi: PsiElement?
-): FirAbstractExpression(session, psi)
+): FirAbstractElement(session, psi), FirExpression

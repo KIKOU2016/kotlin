@@ -3,13 +3,13 @@
  * that can be found in the license/LICENSE.txt file.
  */
 
-package org.jetbrains.kotlin.fir.expressions.impl
+package org.jetbrains.kotlin.fir
 
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 
-abstract class FirAbstractExpression(
+abstract class FirAbstractElement(
     final override val session: FirSession,
     final override val psi: PsiElement?
-) : FirExpression
+) : FirElement

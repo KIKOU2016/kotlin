@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.fir.expressions.impl
 
 import com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.fir.FirAbstractElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.FirVariable
@@ -17,6 +18,6 @@ class FirWhenExpressionImpl(
     psiElement: PsiElement?,
     override val subject: FirExpression? = null,
     override val subjectVariable: FirVariable? = null
-) : FirAbstractExpression(session, psiElement), FirWhenExpression {
+) : FirAbstractElement(session, psiElement), FirWhenExpression {
     override val branches = mutableListOf<FirWhenBranch>()
 }
