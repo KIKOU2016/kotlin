@@ -2,10 +2,10 @@ FILE: branches.kt
     public? final? function foo(a: Int, b: Int): <implicit> {
         return@@@foo when () {
             STUB ->  {
-                STUB
+                a#
             }
             else ->  {
-                STUB
+                b#
             }
         }
 
@@ -14,11 +14,11 @@ FILE: branches.kt
         when () {
             STUB ->  {
                 STUB
-                return@@@bar STUB
+                return@@@bar a#
             }
             else ->  {
                 STUB
-                return@@@bar STUB
+                return@@@bar b#
             }
         }
 
@@ -27,10 +27,10 @@ FILE: branches.kt
         when () {
             STUB ->  {
                 STUB
-                return@@@baz STUB
+                return@@@baz a#
             }
             else ->  {
-                return@@@baz STUB
+                return@@@baz b#
             }
         }
 

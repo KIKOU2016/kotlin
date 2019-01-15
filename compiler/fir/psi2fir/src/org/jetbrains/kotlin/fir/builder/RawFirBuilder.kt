@@ -17,6 +17,7 @@ import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.impl.*
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.*
+import org.jetbrains.kotlin.fir.references.FirSimpleMemberReference
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeAliasSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
@@ -794,6 +795,14 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                 for (statement in expression.statements) {
                     statements += statement.toFirStatement("Statement expected: ${statement.text}")
                 }
+            }
+        }
+
+        override fun visitSimpleNameExpression(expression: KtSimpleNameExpression, data: Unit): FirElement {
+            return FirPropertyGetImpl(session, expression).apply {
+                calleeReference = FirSimpleMemberReference(
+                    session, expression.getReferencedNameElement(), expression.getReferencedNameAsName()
+                )
             }
         }
 
