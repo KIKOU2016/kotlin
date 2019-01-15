@@ -28,7 +28,7 @@ FILE: enums2.kt
             public? constructor(): super<SomeEnum>()
 
             public? open? override function check(y: Some): Boolean {
-                return@@@check STUB
+                return@@@check ==(y#, O2#)
             }
 
         }

@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.fir.builder
 
+import com.intellij.psi.tree.IElementType
 import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
@@ -17,6 +18,7 @@ import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.impl.*
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.*
+import org.jetbrains.kotlin.fir.references.FirErrorMemberReference
 import org.jetbrains.kotlin.fir.references.FirSimpleMemberReference
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeAliasSymbol
@@ -34,6 +36,7 @@ import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.hasActualModifier
 import org.jetbrains.kotlin.psi.psiUtil.hasExpectModifier
 import org.jetbrains.kotlin.types.Variance
+import org.jetbrains.kotlin.types.expressions.OperatorConventions
 
 class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
 
@@ -908,6 +911,75 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                         FirWhenBranchImpl(session, null, FirElseIfTrueCondition(session, null), elseBranch)
                     }
                 }
+            }
+        }
+
+        private fun IElementType.toName(): Name? {
+            return OperatorConventions.BINARY_OPERATION_NAMES[this]
+        }
+
+        private fun IElementType.toFirOperation(): FirOperation =
+            when (this) {
+                KtTokens.LT -> FirOperation.LT
+                KtTokens.GT -> FirOperation.GT
+                KtTokens.LTEQ -> FirOperation.LT_EQ
+                KtTokens.GTEQ -> FirOperation.GT_EQ
+                KtTokens.EQEQ -> FirOperation.EQ
+                KtTokens.EXCLEQ -> FirOperation.NOT_EQ
+                KtTokens.EQEQEQ -> FirOperation.IDENTITY
+                KtTokens.EXCLEQEQEQ -> FirOperation.NOT_IDENTITY
+                KtTokens.ANDAND -> FirOperation.AND
+                KtTokens.OROR -> FirOperation.OR
+                KtTokens.IN_KEYWORD -> FirOperation.IN
+                KtTokens.NOT_IN -> FirOperation.NOT_IN
+                KtTokens.RANGE -> FirOperation.RANGE
+
+                KtTokens.EQ -> FirOperation.ASSIGN
+                KtTokens.PLUSEQ -> FirOperation.PLUS_ASSIGN
+                KtTokens.MINUSEQ -> FirOperation.MINUS_ASSIGN
+                KtTokens.MULTEQ -> FirOperation.TIMES_ASSIGN
+                KtTokens.DIVEQ -> FirOperation.DIV_ASSIGN
+                KtTokens.PERCEQ -> FirOperation.REM_ASSIGN
+
+                else -> FirOperation.OTHER
+            }
+
+        override fun visitBinaryExpression(expression: KtBinaryExpression, data: Unit): FirElement {
+            val conventionCallName = expression.operationToken.toName()
+            val rightArgument = expression.right.toFirExpression("No right operand")
+            return if (conventionCallName != null) {
+                FirFunctionCallImpl(
+                    session, expression
+                ).apply {
+                    calleeReference = FirSimpleMemberReference(
+                        session, expression.operationReference,
+                        conventionCallName
+                    )
+                }
+            } else {
+                val firOperation = expression.operationToken.toFirOperation()
+                if (firOperation in FirOperation.ASSIGNMENTS) {
+                    return FirPropertySetImpl(session, expression, rightArgument, firOperation).apply {
+                        val left = expression.left
+                        if (left is KtSimpleNameExpression) {
+                            calleeReference = FirSimpleMemberReference(
+                                session, left.getReferencedNameElement(), left.getReferencedNameAsName()
+                            )
+                        } else {
+                            // TODO: array accesses etc.
+                            calleeReference = FirErrorMemberReference(
+                                session, left, "Unsupported LValue: ${left?.javaClass}"
+                            )
+                        }
+                    }
+                } else {
+                    FirOperatorCallImpl(
+                        session, expression, firOperation
+                    )
+                }
+            }.apply {
+                arguments += expression.left.toFirExpression("No left operand")
+                arguments += rightArgument
             }
         }
 

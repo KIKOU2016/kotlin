@@ -401,10 +401,7 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
         if (subjectVariable != null) {
             subjectVariable.accept(this)
         } else {
-            val subject = whenExpression.subject
-            if (subject != null) {
-                subject.accept(this)
-            }
+            whenExpression.subject?.accept(this)
         }
         println(") {")
         pushIndent()
@@ -594,5 +591,26 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
 
     override fun visitPropertyGet(propertyGet: FirPropertyGet) {
         print("${propertyGet.calleeReference.name}#")
+    }
+
+    override fun visitPropertySet(propertySet: FirPropertySet) {
+        print("${propertySet.calleeReference.name}# ")
+        print(propertySet.operation.operator)
+        print(" ")
+        propertySet.value.accept(this)
+    }
+
+    override fun visitFunctionCall(functionCall: FirFunctionCall) {
+        print("${functionCall.calleeReference.name}#")
+        visitCall(functionCall)
+    }
+
+    override fun visitOperatorCall(operatorCall: FirOperatorCall) {
+        print(operatorCall.operation.operator)
+        visitCall(operatorCall)
+    }
+
+    override fun visitErrorExpression(errorExpression: FirErrorExpression) {
+        print("ERROR_EXPR(${errorExpression.reason})")
     }
 }

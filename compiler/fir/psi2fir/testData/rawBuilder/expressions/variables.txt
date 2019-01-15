@@ -1,9 +1,9 @@
 FILE: variables.kt
     public? final? function foo(): kotlin.Unit {
         val x = Int(1)
-        var y = STUB
-        val z = STUB
-        STUB
-        val w = STUB
+        var y = plus#(x#, Int(1))
+        val z = times#(y#, Int(2))
+        y# = plus#(y#, z#)
+        val w = minus#(y#, x#)
         return@@@foo w#
     }

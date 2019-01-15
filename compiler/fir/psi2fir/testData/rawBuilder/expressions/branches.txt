@@ -1,7 +1,7 @@
 FILE: branches.kt
     public? final? function foo(a: Int, b: Int): <implicit> {
         return@@@foo when () {
-            STUB ->  {
+            >(a#, b#) ->  {
                 a#
             }
             else ->  {
@@ -12,7 +12,7 @@ FILE: branches.kt
     }
     public? final? function bar(a: Double, b: Double): Double {
         when () {
-            STUB ->  {
+            >(a#, b#) ->  {
                 STUB
                 return@@@bar a#
             }
@@ -25,7 +25,7 @@ FILE: branches.kt
     }
     public? final? function baz(a: Long, b: Long): Long {
         when () {
-            STUB ->  {
+            >(a#, b#) ->  {
                 STUB
                 return@@@baz a#
             }

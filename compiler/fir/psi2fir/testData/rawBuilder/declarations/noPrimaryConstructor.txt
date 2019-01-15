@@ -4,7 +4,7 @@ FILE: noPrimaryConstructor.kt
             public? get(): String
 
         public? constructor(x: String): super<kotlin.Any>() {
-            STUB
+            <Unsupported LValue: class org.jetbrains.kotlin.psi.KtDotQualifiedExpression># = x#
         }
 
         public? constructor(): this<NoPrimary>()

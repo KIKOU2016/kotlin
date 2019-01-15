@@ -13,7 +13,7 @@ FILE: simpleClass.kt
             private get(): <implicit>
 
         public? open? override function foo(x: Int, y: String): String {
-            return@@@foo STUB
+            return@@@foo plus#(plus#(y#, x#), baz#)
         }
 
         public? open? override property bar(var): Boolean

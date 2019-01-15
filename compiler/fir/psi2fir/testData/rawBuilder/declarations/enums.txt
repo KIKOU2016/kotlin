@@ -54,7 +54,7 @@ FILE: enums.kt
 
         }
 
-        public? final? property g(val): Double = STUB
+        public? final? property g(val): Double = div#(times#(G#, m#), STUB)
             public? get(): Double
 
         public? abstract function sayHello(): kotlin.Unit

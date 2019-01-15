@@ -48,7 +48,6 @@ class RawFirBuilderTotalKotlinTestCase : AbstractRawFirBuilderTestCase() {
         println("TIME PER FILE: ${(time / counter) * 1e-6} ms, COUNTER: $counter")
     }
 
-    // This test does not pass yet
     fun testTotalKotlinWithExpressionTrees() {
         testTotalKotlinWithGivenMode(stubMode = false)
     }
@@ -64,7 +63,7 @@ class RawFirBuilderTotalKotlinTestCase : AbstractRawFirBuilderTestCase() {
             if (file.path.contains("testData") || file.path.contains("resources")) continue
             if (file.extension != "kt") continue
             val ktFile = createKtFile(file.toRelativeString(root))
-            val firFile = ktFile.toFirFile(stubMode = true)
+            val firFile = ktFile.toFirFile(stubMode = false)
             try {
                 firFile.checkChildren()
             } catch (e: Throwable) {
@@ -81,7 +80,7 @@ class RawFirBuilderTotalKotlinTestCase : AbstractRawFirBuilderTestCase() {
             if (file.path.contains("testData") || file.path.contains("resources")) continue
             if (file.extension != "kt") continue
             val ktFile = createKtFile(file.toRelativeString(root))
-            val firFile = ktFile.toFirFile(stubMode = true)
+            val firFile = ktFile.toFirFile(stubMode = false)
             try {
                 firFile.checkTransformedChildren()
             } catch (e: Throwable) {
