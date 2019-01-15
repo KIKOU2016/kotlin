@@ -62,7 +62,7 @@ FILE: enums.kt
         public? final? companion object Companion {
             public? constructor(): super<kotlin.Any>()
 
-            public? final? const property G(val): <implicit> = STUB
+            public? final? const property G(val): <implicit> = Double(6.67E-11)
                 public? get(): <implicit>
 
         }

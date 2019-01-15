@@ -103,6 +103,10 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
             if (stubMode) FirExpressionStub(session, null)
             else convertSafe<FirExpression>() ?: FirErrorExpressionImpl(session, this, errorReason)
 
+        private fun KtExpression.toFirStatement(errorReason: String): FirStatement {
+            return convertSafe<FirStatement>() ?: FirErrorExpressionImpl(session, this, errorReason)
+        }
+
         private fun KtExpression?.toFirBlock(): FirBlock =
             when (this) {
                 is KtBlockExpression ->
@@ -633,27 +637,44 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
 
         override fun visitProperty(property: KtProperty, data: Unit): FirElement {
             val propertyType = property.typeReference.toFirOrImplicitType()
-            val firProperty = FirMemberPropertyImpl(
-                session,
-                property,
-                property.nameAsSafeName,
-                property.visibility,
-                property.modality,
-                property.hasExpectModifier(),
-                property.hasActualModifier(),
-                property.hasModifier(KtTokens.OVERRIDE_KEYWORD),
-                property.hasModifier(KtTokens.CONST_KEYWORD),
-                property.hasModifier(KtTokens.LATEINIT_KEYWORD),
-                property.receiverTypeReference.convertSafe(),
-                propertyType,
-                property.isVar,
-                if (property.hasInitializer()) FirExpressionStub(session, property) else null,
-                property.getter.toFirPropertyAccessor(property, propertyType, isGetter = true),
-                property.setter.toFirPropertyAccessor(property, propertyType, isGetter = false),
-                if (property.hasDelegate()) FirExpressionStub(session, property) else null
-            )
+            val name = property.nameAsSafeName
+            val isVar = property.isVar
+            val initializer = if (property.hasInitializer()) {
+                { property.initializer }.toFirExpression("Should have initializer")
+            } else null
+            val firProperty = if (property.isLocal) {
+                FirVariableImpl(
+                    session,
+                    property,
+                    name,
+                    propertyType,
+                    isVar,
+                    initializer
+                )
+            } else {
+                FirMemberPropertyImpl(
+                    session,
+                    property,
+                    name,
+                    property.visibility,
+                    property.modality,
+                    property.hasExpectModifier(),
+                    property.hasActualModifier(),
+                    property.hasModifier(KtTokens.OVERRIDE_KEYWORD),
+                    property.hasModifier(KtTokens.CONST_KEYWORD),
+                    property.hasModifier(KtTokens.LATEINIT_KEYWORD),
+                    property.receiverTypeReference.convertSafe(),
+                    propertyType,
+                    isVar,
+                    initializer,
+                    property.getter.toFirPropertyAccessor(property, propertyType, isGetter = true),
+                    property.setter.toFirPropertyAccessor(property, propertyType, isGetter = false),
+                    if (property.hasDelegate()) FirExpressionStub(session, property) else null
+                ).apply {
+                    property.extractTypeParametersTo(this)
+                }
+            }
             property.extractAnnotationsTo(firProperty)
-            property.extractTypeParametersTo(firProperty)
             return firProperty
         }
 
@@ -771,7 +792,7 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
         override fun visitBlockExpression(expression: KtBlockExpression, data: Unit): FirElement {
             return FirBlockImpl(session, expression).apply {
                 for (statement in expression.statements) {
-                    statements += { statement }.toFirExpression()
+                    statements += statement.toFirStatement("Statement expected: ${statement.text}")
                 }
             }
         }

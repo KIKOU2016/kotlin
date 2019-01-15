@@ -13,5 +13,5 @@ FILE: expectActual.kt
     public? final? actual function foo(): <implicit> {
         return@@@foo String(Hello)
     }
-    public? final? actual property x(val): <implicit> = STUB
+    public? final? actual property x(val): <implicit> = Int(42)
         public? get(): <implicit>

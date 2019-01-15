@@ -200,6 +200,7 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
                 is FirTypeAlias -> "typealias"
                 is FirNamedFunction -> "function"
                 is FirProperty -> "property"
+                is FirVariable -> if (declaration.isVal) "val" else "var"
                 else -> "unknown"
             }
         )
@@ -223,6 +224,15 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
         }
         popIndent()
         println("}")
+    }
+
+    override fun visitVariable(variable: FirVariable) {
+        variable.annotations.renderAnnotations()
+        visitNamedDeclaration(variable)
+        variable.initializer?.let {
+            print(" = ")
+            it.accept(this)
+        }
     }
 
     override fun visitProperty(property: FirProperty) {
@@ -349,10 +359,6 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
             print(" = ")
             it.accept(this)
         }
-    }
-
-    override fun visitVariable(variable: FirVariable) {
-        visitDeclaration(variable)
     }
 
     override fun visitImport(import: FirImport) {

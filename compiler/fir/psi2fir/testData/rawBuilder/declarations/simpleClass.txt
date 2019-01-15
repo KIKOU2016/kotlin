@@ -9,7 +9,7 @@ FILE: simpleClass.kt
     public? final? class SomeClass : SomeInterface {
         public? constructor(): super<kotlin.Any>()
 
-        private final? property baz(val): <implicit> = STUB
+        private final? property baz(val): <implicit> = Int(42)
             private get(): <implicit>
 
         public? open? override function foo(x: Int, y: String): String {
