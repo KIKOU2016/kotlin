@@ -12,7 +12,7 @@ import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirNamedFunction
 import org.jetbrains.kotlin.fir.declarations.FirValueParameter
-import org.jetbrains.kotlin.fir.expressions.FirBody
+import org.jetbrains.kotlin.fir.expressions.FirBlock
 import org.jetbrains.kotlin.fir.transformInplace
 import org.jetbrains.kotlin.fir.types.FirType
 import org.jetbrains.kotlin.fir.visitors.FirTransformer
@@ -35,7 +35,7 @@ class FirMemberFunctionImpl(
     isSuspend: Boolean,
     receiverType: FirType?,
     returnType: FirType,
-    override val body: FirBody?
+    override val body: FirBlock?
 ) : FirAbstractCallableMember(
     session, psi, name, visibility, modality,
     isExpect, isActual, isOverride, receiverType, returnType

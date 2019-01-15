@@ -14,6 +14,10 @@ import org.jetbrains.kotlin.fir.types.*
 abstract class FirVisitor<out R, in D> {
     abstract fun visitElement(element: FirElement, data: D): R
 
+    open fun visitCatch(catch: FirCatch, data: D): R {
+        return visitElement(catch, data)
+    }
+
     open fun visitDeclaration(declaration: FirDeclaration, data: D): R {
         return visitElement(declaration, data)
     }
@@ -106,6 +110,10 @@ abstract class FirVisitor<out R, in D> {
         return visitImport(resolvedImport, data)
     }
 
+    open fun visitLabel(label: FirLabel, data: D): R {
+        return visitElement(label, data)
+    }
+
     open fun visitPackageFragment(packageFragment: FirPackageFragment, data: D): R {
         return visitElement(packageFragment, data)
     }
@@ -122,8 +130,8 @@ abstract class FirVisitor<out R, in D> {
         return visitStatement(expression, data)
     }
 
-    open fun visitBody(body: FirBody, data: D): R {
-        return visitExpression(body, data)
+    open fun visitBlock(block: FirBlock, data: D): R {
+        return visitExpression(block, data)
     }
 
     open fun visitCall(call: FirCall, data: D): R {
@@ -144,6 +152,66 @@ abstract class FirVisitor<out R, in D> {
 
     open fun visitErrorExpression(errorExpression: FirErrorExpression, data: D): R {
         return visitExpression(errorExpression, data)
+    }
+
+    open fun visitExpressionWithType(expressionWithType: FirExpressionWithType, data: D): R {
+        return visitExpression(expressionWithType, data)
+    }
+
+    open fun <E : FirTargetElement> visitJump(jump: FirJump<E>, data: D): R {
+        return visitExpression(jump, data)
+    }
+
+    open fun visitBreakStatement(breakStatement: FirBreakStatement, data: D): R {
+        return visitJump(breakStatement, data)
+    }
+
+    open fun visitContinueStatement(continueStatement: FirContinueStatement, data: D): R {
+        return visitJump(continueStatement, data)
+    }
+
+    open fun visitReturnStatement(returnStatement: FirReturnStatement, data: D): R {
+        return visitJump(returnStatement, data)
+    }
+
+    open fun visitThrowExpression(throwExpression: FirThrowExpression, data: D): R {
+        return visitExpression(throwExpression, data)
+    }
+
+    open fun visitTryExpression(tryExpression: FirTryExpression, data: D): R {
+        return visitExpression(tryExpression, data)
+    }
+
+    open fun visitWhenExpression(whenExpression: FirWhenExpression, data: D): R {
+        return visitExpression(whenExpression, data)
+    }
+
+    open fun visitLoop(loop: FirLoop, data: D): R {
+        return visitStatement(loop, data)
+    }
+
+    open fun visitForLoop(forLoop: FirForLoop, data: D): R {
+        return visitLoop(forLoop, data)
+    }
+
+    open fun visitLoopWithCondition(loopWithCondition: FirLoopWithCondition, data: D): R {
+        return visitLoop(loopWithCondition, data)
+    }
+
+    open fun visitDoWhileLoop(doWhileLoop: FirDoWhileLoop, data: D): R {
+        return visitLoopWithCondition(doWhileLoop, data)
+    }
+
+    open fun visitWhileLoop(whileLoop: FirWhileLoop, data: D): R {
+        return visitLoopWithCondition(whileLoop, data)
+    }
+
+    open fun visitTargetElement(targetElement: FirTargetElement, data: D): R {
+        return visitElement(targetElement, data)
+    }
+
+    open fun visitLabeledElement(labeledElement: FirLabeledElement, data: D): R {
+        return visitTargetElement(labeledElement, data)
     }
 
     open fun visitType(type: FirType, data: D): R {
@@ -196,6 +264,10 @@ abstract class FirVisitor<out R, in D> {
 
     open fun visitTypeProjectionWithVariance(typeProjectionWithVariance: FirTypeProjectionWithVariance, data: D): R {
         return visitTypeProjection(typeProjectionWithVariance, data)
+    }
+
+    open fun visitWhenBranch(whenBranch: FirWhenBranch, data: D): R {
+        return visitElement(whenBranch, data)
     }
 
 }

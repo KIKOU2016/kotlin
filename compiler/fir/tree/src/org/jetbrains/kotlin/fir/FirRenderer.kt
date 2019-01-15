@@ -291,10 +291,10 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
         declarationWithBody.body?.accept(this)
     }
 
-    override fun visitBody(body: FirBody) {
+    override fun visitBlock(block: FirBlock) {
         println(" {")
         pushIndent()
-        for (statement in body.statements) {
+        for (statement in block.statements) {
             statement.accept(this)
             println()
         }

@@ -8,10 +8,10 @@ package org.jetbrains.kotlin.fir.declarations.impl
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirAnonymousInitializer
-import org.jetbrains.kotlin.fir.expressions.FirBody
+import org.jetbrains.kotlin.fir.expressions.FirBlock
 
 class FirAnonymousInitializerImpl(
     override val session: FirSession,
     override val psi: PsiElement?,
-    override val body: FirBody?
+    override val body: FirBlock?
 ) : FirAnonymousInitializer

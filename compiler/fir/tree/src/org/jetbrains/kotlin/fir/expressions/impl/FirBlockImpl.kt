@@ -7,9 +7,9 @@ package org.jetbrains.kotlin.fir.expressions.impl
 
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.fir.FirSession
-import org.jetbrains.kotlin.fir.expressions.FirBody
+import org.jetbrains.kotlin.fir.expressions.FirBlock
 import org.jetbrains.kotlin.fir.expressions.FirStatement
 
-class FirBlockBodyImpl(override val session: FirSession, override val psi: PsiElement?) : FirBody {
+class FirBlockImpl(override val session: FirSession, override val psi: PsiElement?) : FirBlock {
     override val statements = mutableListOf<FirStatement>()
 }

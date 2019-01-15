@@ -15,7 +15,7 @@ import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.impl.*
 import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
-import org.jetbrains.kotlin.fir.expressions.FirBody
+import org.jetbrains.kotlin.fir.expressions.FirBlock
 import org.jetbrains.kotlin.fir.expressions.FirDelegatedConstructorCall
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.impl.*
@@ -86,11 +86,11 @@ class RawFirBuilder(val session: FirSession) {
         private fun KtTypeReference?.toFirOrErrorType(): FirType =
             convertSafe() ?: FirErrorTypeImpl(session, this, if (this == null) "Incomplete code" else "Conversion failed")
 
-        private fun KtDeclarationWithBody.buildFirBody(): FirBody? =
+        private fun KtDeclarationWithBody.buildFirBody(): FirBlock? =
             when {
                 !hasBody() -> null
-                hasBlockBody() -> FirBlockBodyImpl(session, this)
-                else -> FirExpressionBodyImpl(session, FirExpressionStub(session, null))
+                hasBlockBody() -> FirBlockImpl(session, this)
+                else -> FirSingleExpressionBlock(session, FirExpressionStub(session, null))
             }
 
         private fun String.parseCharacter(): Char? {
@@ -610,7 +610,7 @@ class RawFirBuilder(val session: FirSession) {
             return FirAnonymousInitializerImpl(
                 session,
                 initializer,
-                FirBlockBodyImpl(session, initializer)
+                FirBlockImpl(session, initializer)
             )
         }
 
@@ -752,7 +752,7 @@ class RawFirBuilder(val session: FirSession) {
             parameter.toFirValueParameter()
 
         override fun visitBlockExpression(expression: KtBlockExpression, data: Unit): FirElement {
-            return FirBlockBodyImpl(session, expression)
+            return FirBlockImpl(session, expression)
         }
 
         override fun visitExpression(expression: KtExpression, data: Unit): FirElement {

@@ -7,13 +7,13 @@ package org.jetbrains.kotlin.fir.expressions.impl
 
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.fir.FirSession
-import org.jetbrains.kotlin.fir.expressions.FirBody
+import org.jetbrains.kotlin.fir.expressions.FirBlock
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 
-class FirExpressionBodyImpl(
+class FirSingleExpressionBlock(
     override val session: FirSession,
     private val expression: FirExpression
-) : FirBody {
+) : FirBlock {
     override val statements = listOf(expression)
 
     override val psi: PsiElement?
