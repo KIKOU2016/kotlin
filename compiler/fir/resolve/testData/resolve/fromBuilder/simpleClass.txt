@@ -21,6 +21,7 @@ FILE: simpleClass.kt
                 return STUB
             }
             public set(value: R|kotlin/Boolean|): R|kotlin/Unit| {
+                return STUB
             }
 
         public final lateinit property fau(var): R|kotlin/Double|

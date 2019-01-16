@@ -124,24 +124,38 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                     )
             }
 
+        private fun FirExpression.toReturn(labelName: String? = null): FirReturnStatement {
+            return FirReturnStatementImpl(
+                session,
+                this.psi,
+                this
+            ).apply {
+                target = FirFunctionTarget(labelName)
+                if (labelName == null) {
+                    target.bind(firFunctions.last())
+                } else {
+                    // TODO
+                }
+            }
+        }
+
         private fun KtDeclarationWithBody.buildFirBody(): FirBlock? =
             when {
                 !hasBody() ->
                     null
-                hasBlockBody() ->
+                hasBlockBody() -> if (!stubMode) {
                     bodyBlockExpression?.accept(this@Visitor, Unit) as? FirBlock
+                } else {
+                    FirSingleExpressionBlock(
+                        session,
+                        FirExpressionStub(session, this).toReturn()
+                    )
+                }
                 else -> {
                     val result = { bodyExpression }.toFirExpression("Function has no body (but should)")
                     FirSingleExpressionBlock(
                         session,
-                        FirReturnStatementImpl(
-                            session,
-                            result.psi,
-                            result
-                        ).apply {
-                            target = FirFunctionTarget(labelName = null)
-                            target.bind(firFunctions.last())
-                        }
+                        result.toReturn()
                     )
                 }
             }
@@ -858,19 +872,8 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
         }
 
         override fun visitReturnExpression(expression: KtReturnExpression, data: Unit): FirElement {
-            return FirReturnStatementImpl(
-                session,
-                expression,
-                expression.returnedExpression?.toFirExpression() ?: FirUnitExpression(session, expression)
-            ).apply {
-                val labelName = expression.getTargetLabel()?.getReferencedName()
-                target = FirFunctionTarget(labelName)
-                if (labelName == null) {
-                    target.bind(firFunctions.last())
-                } else {
-                    // TODO
-                }
-            }
+            val result = expression.returnedExpression?.toFirExpression() ?: FirUnitExpression(session, expression)
+            return result.toReturn(expression.getTargetLabel()?.getReferencedName())
         }
 
         override fun visitIfExpression(expression: KtIfExpression, data: Unit): FirElement {
