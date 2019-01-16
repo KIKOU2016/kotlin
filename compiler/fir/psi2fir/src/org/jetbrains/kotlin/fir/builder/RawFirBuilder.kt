@@ -944,7 +944,7 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                 KtTokens.DIVEQ -> FirOperation.DIV_ASSIGN
                 KtTokens.PERCEQ -> FirOperation.REM_ASSIGN
 
-                else -> FirOperation.OTHER
+                else -> throw AssertionError(this.toString())
             }
 
         override fun visitBinaryExpression(expression: KtBinaryExpression, data: Unit): FirElement {
