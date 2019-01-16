@@ -9,5 +9,4 @@ import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 
-@Deprecated("Temporary class until we have normal expressions")
 class FirExpressionStub(override val session: FirSession, override val psi: PsiElement?) : FirExpression
