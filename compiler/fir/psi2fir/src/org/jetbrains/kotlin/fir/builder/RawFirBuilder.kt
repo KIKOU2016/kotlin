@@ -978,8 +978,12 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
             }
         }
 
-        private fun IElementType.toName(): Name? {
+        private fun IElementType.toBinaryName(): Name? {
             return OperatorConventions.BINARY_OPERATION_NAMES[this]
+        }
+
+        private fun IElementType.toUnaryName(): Name? {
+            return OperatorConventions.UNARY_OPERATION_NAMES[this]
         }
 
         private fun IElementType.toFirOperation(): FirOperation =
@@ -1008,38 +1012,47 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                 else -> throw AssertionError(this.toString())
             }
 
-        private fun KtBinaryExpression.elvisToWhen(): FirWhenExpression {
-            val rightArgument = right.toFirExpression("No right operand")
-            val leftArgument = left.toFirExpression("No left operand")
-            val subjectName = Name.special("<elvis>")
+        private fun FirExpression.generateNotNullOrOther(other: FirExpression, caseId: String): FirWhenExpression {
+            val subjectName = Name.special("<$caseId>")
             val subjectVariable = FirVariableImpl(
-                session, left, subjectName,
-                FirImplicitTypeImpl(session, left), false, leftArgument
+                session, psi, subjectName,
+                FirImplicitTypeImpl(session, psi), false, this
             )
-            val subjectExpression = FirWhenSubjectExpression(session, this)
+            val subjectExpression = FirWhenSubjectExpression(session, psi)
             return FirWhenExpressionImpl(
-                session, this, leftArgument, subjectVariable
+                session, psi, this, subjectVariable
             ).apply {
                 branches += FirWhenBranchImpl(
-                    session, left,
-                    FirOperatorCallImpl(session, left, FirOperation.NOT_EQ).apply {
+                    session, psi,
+                    FirOperatorCallImpl(session, psi, FirOperation.NOT_EQ).apply {
                         arguments += subjectExpression
-                        arguments += FirConstExpressionImpl(session, left, IrConstKind.Null, null)
+                        arguments += FirConstExpressionImpl(session, psi, IrConstKind.Null, null)
                     },
                     FirSingleExpressionBlock(
                         session,
-                        FirPropertyGetImpl(session, left).apply {
+                        FirPropertyGetImpl(session, psi).apply {
                             calleeReference = FirSimpleMemberReference(
-                                session, left, subjectName
+                                session, psi, subjectName
                             )
                         }
                     )
                 )
                 branches += FirWhenBranchImpl(
-                    session, right, FirElseIfTrueCondition(session, this@elvisToWhen),
-                    FirSingleExpressionBlock(session, rightArgument)
+                    session, other.psi, FirElseIfTrueCondition(session, psi),
+                    FirSingleExpressionBlock(session, other)
                 )
             }
+        }
+
+        private fun KtBinaryExpression.elvisToWhen(): FirWhenExpression {
+            val rightArgument = right.toFirExpression("No right operand")
+            val leftArgument = left.toFirExpression("No left operand")
+            return leftArgument.generateNotNullOrOther(rightArgument, "elvis")
+        }
+
+        private fun KtUnaryExpression.bangBangToWhen(): FirWhenExpression {
+            // TODO: replace stub with throw
+            return baseExpression.toFirExpression("No operand").generateNotNullOrOther(FirExpressionStub(session, this), "bangbang")
         }
 
         override fun visitBinaryExpression(expression: KtBinaryExpression, data: Unit): FirElement {
@@ -1048,7 +1061,7 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
             if (operationToken == KtTokens.ELVIS) {
                 return expression.elvisToWhen()
             }
-            val conventionCallName = operationToken.toName()
+            val conventionCallName = operationToken.toBinaryName()
             return if (conventionCallName != null || operationToken == KtTokens.IDENTIFIER) {
                 FirFunctionCallImpl(
                     session, expression
@@ -1085,6 +1098,74 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
             }
         }
 
+        private fun generateIncrementOrDecrementBlock(
+            baseExpression: KtUnaryExpression,
+            argument: KtSimpleNameExpression?,
+            callName: Name,
+            prefix: Boolean
+        ): FirExpression {
+            if (argument == null) return FirErrorExpressionImpl(session, argument, "Inc/dec without operand")
+            return FirBlockImpl(session, baseExpression).apply {
+                val tempName = Name.special("<unary>")
+                val argumentName = argument.getReferencedNameAsName()
+                statements += FirVariableImpl(
+                    session, baseExpression, tempName,
+                    FirImplicitTypeImpl(session, baseExpression),
+                    false,
+                    FirPropertyGetImpl(session, argument).apply {
+                        this.calleeReference = FirSimpleMemberReference(session, argument, argumentName)
+                    }
+                )
+                statements += FirPropertySetImpl(
+                    session, baseExpression,
+                    FirFunctionCallImpl(session, baseExpression).apply {
+                        this.calleeReference = FirSimpleMemberReference(session, baseExpression.operationReference, callName)
+                        this.arguments += FirPropertyGetImpl(session, baseExpression).apply {
+                            this.calleeReference = FirSimpleMemberReference(session, baseExpression, tempName)
+                        }
+                    },
+                    FirOperation.ASSIGN
+                ).apply {
+                    this.calleeReference = FirSimpleMemberReference(session, argument, argumentName)
+                }
+                statements += FirPropertyGetImpl(session, baseExpression).apply {
+                    this.calleeReference = FirSimpleMemberReference(session, baseExpression, if (prefix) argumentName else tempName)
+                }
+            }
+        }
+
+        override fun visitUnaryExpression(expression: KtUnaryExpression, data: Unit): FirElement {
+            val operationToken = expression.operationToken
+            val argument = expression.baseExpression
+            if (operationToken == KtTokens.EXCLEXCL) {
+                return expression.bangBangToWhen()
+            }
+            val conventionCallName = operationToken.toUnaryName()
+            return if (conventionCallName != null) {
+                if (operationToken in OperatorConventions.INCREMENT_OPERATIONS) {
+                    return generateIncrementOrDecrementBlock(
+                        expression, argument as? KtSimpleNameExpression,
+                        callName = conventionCallName,
+                        prefix = expression is KtPrefixExpression
+                    )
+                }
+                FirFunctionCallImpl(
+                    session, expression
+                ).apply {
+                    calleeReference = FirSimpleMemberReference(
+                        session, expression.operationReference, conventionCallName
+                    )
+                }
+            } else {
+                val firOperation = operationToken.toFirOperation()
+                FirOperatorCallImpl(
+                    session, expression, firOperation
+                )
+            }.apply {
+                arguments += argument.toFirExpression("No operand")
+            }
+        }
+
         override fun visitCallExpression(expression: KtCallExpression, data: Unit): FirElement {
             val calleeExpression = expression.calleeExpression
             return FirFunctionCallImpl(session, expression).apply {
@@ -1107,6 +1188,10 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                     arguments += argument.getArgumentExpression().toFirExpression("No argument expression")
                 }
             }
+        }
+
+        override fun visitParenthesizedExpression(expression: KtParenthesizedExpression, data: Unit): FirElement {
+            return expression.expression?.accept(this, data) ?: FirErrorExpressionImpl(session, expression, "Empty parentheses")
         }
 
         override fun visitExpression(expression: KtExpression, data: Unit): FirElement {

@@ -1,0 +1,36 @@
+FILE: unary.kt
+    public? final? function test(): kotlin.Unit {
+        var x = Int(0)
+        val x1 =  {
+            val <unary> = x#
+            x# = inc#(<unary>#)
+            <unary>#
+        }
+
+        val x2 =  {
+            val <unary> = x#
+            x# = inc#(<unary>#)
+            x#
+        }
+
+        val x3 =  {
+            val <unary> = x#
+            x# = dec#(<unary>#)
+            x#
+        }
+
+        val x4 =  {
+            val <unary> = x#
+            x# = dec#(<unary>#)
+            <unary>#
+        }
+
+        when () {
+            not#(==(x#, Int(0))) ->  {
+                println#(String(000))
+            }
+            else ->  {
+            }
+        }
+
+    }

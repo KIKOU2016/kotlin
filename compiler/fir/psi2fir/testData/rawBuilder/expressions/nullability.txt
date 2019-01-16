@@ -10,3 +10,14 @@ FILE: nullability.kt
         }
 
     }
+    public? final? function bang(arg: Int?): <implicit> {
+        return@@@bang when (val <bangbang> = arg#) {
+            !=($subj$, Null(null)) ->  {
+                <bangbang>#
+            }
+            else ->  {
+                STUB
+            }
+        }
+
+    }
