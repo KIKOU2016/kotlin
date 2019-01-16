@@ -11,5 +11,5 @@ FILE: derivedClass.kt
 
     }
     <T : Any> public? final? function create(x: T): Derived<T> {
-        return@@@create STUB
+        return@@@create Derived#(x#)
     }

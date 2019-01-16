@@ -37,6 +37,7 @@ import org.jetbrains.kotlin.psi.psiUtil.hasActualModifier
 import org.jetbrains.kotlin.psi.psiUtil.hasExpectModifier
 import org.jetbrains.kotlin.types.Variance
 import org.jetbrains.kotlin.types.expressions.OperatorConventions
+import org.jetbrains.kotlin.util.OperatorNameConventions
 
 class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
 
@@ -1048,13 +1049,13 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                 return expression.elvisToWhen()
             }
             val conventionCallName = operationToken.toName()
-            return if (conventionCallName != null) {
+            return if (conventionCallName != null || operationToken == KtTokens.IDENTIFIER) {
                 FirFunctionCallImpl(
                     session, expression
                 ).apply {
                     calleeReference = FirSimpleMemberReference(
                         session, expression.operationReference,
-                        conventionCallName
+                        conventionCallName ?: expression.operationReference.getReferencedNameAsName()
                     )
                 }
             } else {
@@ -1081,6 +1082,30 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
             }.apply {
                 arguments += expression.left.toFirExpression("No left operand")
                 arguments += rightArgument
+            }
+        }
+
+        override fun visitCallExpression(expression: KtCallExpression, data: Unit): FirElement {
+            val calleeExpression = expression.calleeExpression
+            return FirFunctionCallImpl(session, expression).apply {
+                val calleeReference = when (calleeExpression) {
+                    is KtSimpleNameExpression -> FirSimpleMemberReference(
+                        session, calleeExpression, calleeExpression.getReferencedNameAsName()
+                    )
+                    null -> FirErrorMemberReference(
+                        session, calleeExpression, "Call has no callee"
+                    )
+                    else -> {
+                        arguments += calleeExpression.toFirExpression()
+                        FirSimpleMemberReference(
+                            session, expression, OperatorNameConventions.INVOKE
+                        )
+                    }
+                }
+                this.calleeReference = calleeReference
+                for (argument in expression.valueArguments) {
+                    arguments += argument.getArgumentExpression().toFirExpression("No argument expression")
+                }
             }
         }
 

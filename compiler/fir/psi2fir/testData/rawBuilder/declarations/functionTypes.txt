@@ -1,6 +1,6 @@
 FILE: functionTypes.kt
     <T> public? final? function simpleRun(f: ( (T) -> Unit )): Unit {
-        return@@@simpleRun STUB
+        return@@@simpleRun f#()
     }
     <T, R> public? final? function simpleMap List<T>.(f: ( (T) -> R )): R {
     }
