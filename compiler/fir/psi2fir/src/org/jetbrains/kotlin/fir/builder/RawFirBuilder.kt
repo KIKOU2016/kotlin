@@ -1007,9 +1007,47 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                 else -> throw AssertionError(this.toString())
             }
 
+        private fun KtBinaryExpression.elvisToWhen(): FirWhenExpression {
+            val rightArgument = right.toFirExpression("No right operand")
+            val leftArgument = left.toFirExpression("No left operand")
+            val subjectName = Name.special("<elvis>")
+            val subjectVariable = FirVariableImpl(
+                session, left, subjectName,
+                FirImplicitTypeImpl(session, left), false, leftArgument
+            )
+            val subjectExpression = FirWhenSubjectExpression(session, this)
+            return FirWhenExpressionImpl(
+                session, this, leftArgument, subjectVariable
+            ).apply {
+                branches += FirWhenBranchImpl(
+                    session, left,
+                    FirOperatorCallImpl(session, left, FirOperation.NOT_EQ).apply {
+                        arguments += subjectExpression
+                        arguments += FirConstExpressionImpl(session, left, IrConstKind.Null, null)
+                    },
+                    FirSingleExpressionBlock(
+                        session,
+                        FirPropertyGetImpl(session, left).apply {
+                            calleeReference = FirSimpleMemberReference(
+                                session, left, subjectName
+                            )
+                        }
+                    )
+                )
+                branches += FirWhenBranchImpl(
+                    session, right, FirElseIfTrueCondition(session, this@elvisToWhen),
+                    FirSingleExpressionBlock(session, rightArgument)
+                )
+            }
+        }
+
         override fun visitBinaryExpression(expression: KtBinaryExpression, data: Unit): FirElement {
-            val conventionCallName = expression.operationToken.toName()
+            val operationToken = expression.operationToken
             val rightArgument = expression.right.toFirExpression("No right operand")
+            if (operationToken == KtTokens.ELVIS) {
+                return expression.elvisToWhen()
+            }
+            val conventionCallName = operationToken.toName()
             return if (conventionCallName != null) {
                 FirFunctionCallImpl(
                     session, expression
@@ -1020,7 +1058,7 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                     )
                 }
             } else {
-                val firOperation = expression.operationToken.toFirOperation()
+                val firOperation = operationToken.toFirOperation()
                 if (firOperation in FirOperation.ASSIGNMENTS) {
                     return FirPropertySetImpl(session, expression, rightArgument, firOperation).apply {
                         val left = expression.left

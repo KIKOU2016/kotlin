@@ -149,6 +149,11 @@ public class RawFirBuilderTestCaseGenerated extends AbstractRawFirBuilderTestCas
             runTest("compiler/fir/psi2fir/testData/rawBuilder/expressions/branches.kt");
         }
 
+        @TestMetadata("nullability.kt")
+        public void testNullability() throws Exception {
+            runTest("compiler/fir/psi2fir/testData/rawBuilder/expressions/nullability.kt");
+        }
+
         @TestMetadata("simpleReturns.kt")
         public void testSimpleReturns() throws Exception {
             runTest("compiler/fir/psi2fir/testData/rawBuilder/expressions/simpleReturns.kt");

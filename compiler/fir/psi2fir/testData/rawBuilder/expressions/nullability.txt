@@ -1,0 +1,12 @@
+FILE: nullability.kt
+    public? final? function orFourtyTwo(arg: Int?): <implicit> {
+        return@@@orFourtyTwo when (val <elvis> = arg#) {
+            !=($subj$, Null(null)) ->  {
+                <elvis>#
+            }
+            else ->  {
+                Int(42)
+            }
+        }
+
+    }

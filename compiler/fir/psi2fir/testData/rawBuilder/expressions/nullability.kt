@@ -1,0 +1,1 @@
+fun orFourtyTwo(arg: Int?) = arg ?: 42
