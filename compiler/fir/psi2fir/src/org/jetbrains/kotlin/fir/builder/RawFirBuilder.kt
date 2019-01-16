@@ -634,15 +634,16 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                 isThis -> delegatedSelfType
                 else -> delegatedSuperType ?: FirErrorTypeImpl(session, this, "No super type")
             }
-            val firConstructorCall = FirDelegatedConstructorCallImpl(
+            return FirDelegatedConstructorCallImpl(
                 session,
                 this,
                 delegatedType,
                 isThis
-            )
-            // TODO: arguments are not needed for light classes, but will be needed later
-            // call.extractArgumentsTo(firConstructorCall)
-            return firConstructorCall
+            ).apply {
+                if (!stubMode) {
+                    extractArgumentsTo(this)
+                }
+            }
         }
 
         override fun visitAnonymousInitializer(initializer: KtAnonymousInitializer, data: Unit): FirElement {

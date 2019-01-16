@@ -7,6 +7,6 @@ FILE: noPrimaryConstructor.kt
             <Unsupported LValue: class org.jetbrains.kotlin.psi.KtDotQualifiedExpression># = x#
         }
 
-        public? constructor(): this<NoPrimary>()
+        public? constructor(): this<NoPrimary>(String())
 
     }
