@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
+ * Copyright 2010-2019 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
  * that can be found in the license/LICENSE.txt file.
  */
 
@@ -545,7 +545,7 @@ class CoroutineTransformerMethodVisitor(
             val variablesToSpill =
                 (0 until localsCount)
                     .filterNot {
-                        it in setOf(continuationIndex, dataIndex, exceptionIndex) || it.isInlinerFakeVariable(suspensionCallBegin.index())
+                        it in setOf(continuationIndex, dataIndex, exceptionIndex) || it.isInlinerFakeVariable(suspension.suspensionCallEnd.index())
                     }.map { Pair(it, frame.getLocal(it)) }
                     .filter { (index, value) ->
                         (index == 0 && needDispatchReceiver && isForNamedFunction) ||
