@@ -19,3 +19,14 @@ fun baz(a: Long, b: Long): Long {
         else -> return b
     }
 }
+
+fun grade(g: Int): String {
+    return when (g) {
+        6, 7 -> "Outstanding"
+        5 -> "Excellent"
+        4 -> "Good"
+        3 -> "Mediocre"
+        in 1..2 -> "Fail"
+        else -> "Unknown"
+    }
+}

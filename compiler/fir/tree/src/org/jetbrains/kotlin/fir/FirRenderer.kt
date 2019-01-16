@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.expressions.impl.FirElseIfTrueCondition
 import org.jetbrains.kotlin.fir.expressions.impl.FirExpressionStub
 import org.jetbrains.kotlin.fir.expressions.impl.FirUnitExpression
+import org.jetbrains.kotlin.fir.expressions.impl.FirWhenSubjectExpression
 import org.jetbrains.kotlin.fir.symbols.ConeClassLikeSymbol
 import org.jetbrains.kotlin.fir.symbols.ConeSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
@@ -417,6 +418,7 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
             when (expression) {
                 is FirExpressionStub -> "STUB"
                 is FirUnitExpression -> "Unit"
+                is FirWhenSubjectExpression -> "\$subj\$"
                 else -> "??? ${expression.javaClass}"
             }
         )

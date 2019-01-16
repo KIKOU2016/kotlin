@@ -891,28 +891,87 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
             }
         }
 
+        private fun KtWhenCondition.toFirWhenCondition(firSubjectExpression: FirExpression): FirExpression {
+            return when (this) {
+                is KtWhenConditionWithExpression -> {
+                    val expressionInCondition = expression
+                    FirOperatorCallImpl(
+                        session,
+                        expressionInCondition,
+                        FirOperation.EQ
+                    ).apply {
+                        arguments += firSubjectExpression
+                        arguments += expressionInCondition.toFirExpression("No expression in condition with expression")
+                    }
+                }
+                is KtWhenConditionInRange -> {
+                    val rangeExpression = rangeExpression
+                    FirOperatorCallImpl(
+                        session,
+                        rangeExpression,
+                        if (isNegated) FirOperation.NOT_IN else FirOperation.IN
+                    ).apply {
+                        arguments += firSubjectExpression
+                        arguments += rangeExpression.toFirExpression("No range in condition with range")
+                    }
+                }
+                // TODO: support KtWhenConditionIsPattern
+                else -> {
+                    FirErrorExpressionImpl(session, this, "Unsupported when condition: ${this.javaClass}")
+                }
+            }
+        }
+
         override fun visitWhenExpression(expression: KtWhenExpression, data: Unit): FirElement {
             val subjectExpression = expression.subjectExpression
             val subject = when (subjectExpression) {
                 is KtVariableDeclaration -> subjectExpression.initializer
                 else -> subjectExpression
             }?.toFirExpression()
+            val subjectVariable = when (subjectExpression) {
+                is KtVariableDeclaration -> FirVariableImpl(
+                    session, subjectExpression, subjectExpression.nameAsSafeName,
+                    subjectExpression.typeReference.toFirOrImplicitType(),
+                    isVar = false, initializer = subject
+                )
+                else -> null
+            }
+            val hasSubject = subject != null
             return FirWhenExpressionImpl(
                 session,
                 expression,
-                subject
-                // TODO: integrate subject into conditions and support subjectVariable
+                subject,
+                subjectVariable
             ).apply {
                 for (entry in expression.entries) {
+                    val branch = entry.expression.toFirBlock()
                     branches += if (!entry.isElse) {
-                        // TODO: yet only the first condition is supported, and only with expression
-                        val condition = entry.conditions.firstOrNull() as? KtWhenConditionWithExpression
-                        val firCondition = condition?.expression.toFirExpression("When entry should have condition")
-                        val branch = entry.expression.toFirBlock()
-                        FirWhenBranchImpl(session, condition, firCondition, branch)
+                        if (hasSubject) {
+                            var firCondition: FirExpression? = null
+                            val firSubjectExpression = FirWhenSubjectExpression(session, subjectExpression)
+                            for (condition in entry.conditions) {
+                                val firConditionElement = condition.toFirWhenCondition(firSubjectExpression)
+                                when {
+                                    firCondition == null -> firCondition = firConditionElement
+                                    firCondition is FirOperatorCallImpl && firCondition.operation == FirOperation.OR -> {
+                                        firCondition.arguments += firConditionElement
+                                    }
+                                    else -> {
+                                        firCondition = FirOperatorCallImpl(session, entry, FirOperation.OR).apply {
+                                            arguments += firCondition!!
+                                            arguments += firConditionElement
+                                        }
+                                    }
+                                }
+                            }
+                            FirWhenBranchImpl(session, entry, firCondition!!, branch)
+                        } else {
+                            val condition = entry.conditions.first() as KtWhenConditionWithExpression
+                            val firCondition = condition.expression.toFirExpression("No expression in condition with expression")
+                            FirWhenBranchImpl(session, condition, firCondition, branch)
+                        }
                     } else {
-                        val elseBranch = entry.expression.toFirBlock()
-                        FirWhenBranchImpl(session, null, FirElseIfTrueCondition(session, null), elseBranch)
+                        FirWhenBranchImpl(session, null, FirElseIfTrueCondition(session, null), branch)
                     }
                 }
             }
