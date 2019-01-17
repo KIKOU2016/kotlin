@@ -158,6 +158,9 @@ internal fun IElementType.toFirOperation(): FirOperation =
         KtTokens.DIVEQ -> FirOperation.DIV_ASSIGN
         KtTokens.PERCEQ -> FirOperation.REM_ASSIGN
 
+        KtTokens.AS_KEYWORD -> FirOperation.AS
+        KtTokens.AS_SAFE -> FirOperation.SAFE_AS
+
         else -> throw AssertionError(this.toString())
     }
 

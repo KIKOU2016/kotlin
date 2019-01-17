@@ -918,6 +918,24 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
             }
         }
 
+        override fun visitBinaryWithTypeRHSExpression(expression: KtBinaryExpressionWithTypeRHS, data: Unit): FirElement {
+            val operation = expression.operationReference.getReferencedNameElementType().toFirOperation()
+            return FirTypeOperatorCallImpl(
+                session, expression, operation, expression.right.toFirOrErrorType()
+            ).apply {
+                arguments += expression.left.toFirExpression("No left operand")
+            }
+        }
+
+        override fun visitIsExpression(expression: KtIsExpression, data: Unit): FirElement {
+            return FirTypeOperatorCallImpl(
+                session, expression, if (expression.isNegated) FirOperation.IS else FirOperation.NOT_IS,
+                expression.typeReference.toFirOrErrorType()
+            ).apply {
+                arguments += expression.leftHandSide.toFirExpression("No left operand")
+            }
+        }
+
         override fun visitUnaryExpression(expression: KtUnaryExpression, data: Unit): FirElement {
             val operationToken = expression.operationToken
             val argument = expression.baseExpression

@@ -609,6 +609,10 @@ class FirRenderer(builder: StringBuilder) : FirVisitorVoid() {
 
     override fun visitOperatorCall(operatorCall: FirOperatorCall) {
         print(operatorCall.operation.operator)
+        if (operatorCall is FirTypeOperatorCall) {
+            print("/")
+            operatorCall.type.accept(this)
+        }
         visitCall(operatorCall)
     }
 
