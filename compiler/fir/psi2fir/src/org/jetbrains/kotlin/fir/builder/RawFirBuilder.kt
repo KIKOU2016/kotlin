@@ -5,8 +5,6 @@
 
 package org.jetbrains.kotlin.fir.builder
 
-import com.intellij.psi.tree.IElementType
-import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.Visibilities
@@ -89,17 +87,12 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
         private fun KtTypeReference?.toFirOrErrorType(): FirType =
             convertSafe() ?: FirErrorTypeImpl(session, this, if (this == null) "Incomplete code" else "Conversion failed")
 
-        // Here and below we accept lambda as receiver
-        // to prevent expression calculation in stub mode
+        // Here we accept lambda as receiver to prevent expression calculation in stub mode
         private fun (() -> KtExpression?).toFirExpression(errorReason: String): FirExpression =
             if (stubMode) FirExpressionStub(session, null)
             else with(this()) {
                 convertSafe<FirExpression>() ?: FirErrorExpressionImpl(session, this, errorReason)
             }
-
-        private fun (() -> KtExpression).toFirExpression(): FirExpression =
-            if (stubMode) FirExpressionStub(session, null)
-            else this().convert<FirExpression>()
 
         private fun KtExpression.toFirExpression(): FirExpression =
             if (stubMode) FirExpressionStub(session, null) else convert<FirExpression>()
@@ -108,9 +101,8 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
             if (stubMode) FirExpressionStub(session, null)
             else convertSafe<FirExpression>() ?: FirErrorExpressionImpl(session, this, errorReason)
 
-        private fun KtExpression.toFirStatement(errorReason: String): FirStatement {
-            return convertSafe<FirStatement>() ?: FirErrorExpressionImpl(session, this, errorReason)
-        }
+        private fun KtExpression.toFirStatement(errorReason: String): FirStatement =
+            convertSafe() ?: FirErrorExpressionImpl(session, this, errorReason)
 
         private fun KtExpression?.toFirBlock(): FirBlock =
             when (this) {
@@ -159,73 +151,6 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
                         result.toReturn()
                     )
                 }
-            }
-
-        private fun String.parseCharacter(): Char? {
-            // Strip the quotes
-            if (length < 2 || this[0] != '\'' || this[length - 1] != '\'') {
-                return null
-            }
-            val text = substring(1, length - 1) // now there're no quotes
-
-            if (text.isEmpty()) {
-                return null
-            }
-
-            return if (text[0] != '\\') {
-                // No escape
-                if (text.length == 1) {
-                    text[0]
-                } else {
-                    null
-                }
-            } else {
-                escapedStringToCharacter(text)
-            }
-        }
-
-        private fun escapedStringToCharacter(text: String): Char? {
-            assert(text.isNotEmpty() && text[0] == '\\') {
-                "Only escaped sequences must be passed to this routine: $text"
-            }
-
-            // Escape
-            val escape = text.substring(1) // strip the slash
-            when (escape.length) {
-                0 -> {
-                    // bare slash
-                    return null
-                }
-                1 -> {
-                    // one-char escape
-                    return translateEscape(escape[0]) ?: return null
-                }
-                5 -> {
-                    // unicode escape
-                    if (escape[0] == 'u') {
-                        try {
-                            val intValue = Integer.valueOf(escape.substring(1), 16)
-                            return intValue.toInt().toChar()
-                        } catch (e: NumberFormatException) {
-                            // Will be reported below
-                        }
-                    }
-                }
-            }
-            return null
-        }
-
-        private fun translateEscape(c: Char): Char? =
-            when (c) {
-                't' -> '\t'
-                'b' -> '\b'
-                'n' -> '\n'
-                'r' -> '\r'
-                '\'' -> '\''
-                '\"' -> '\"'
-                '\\' -> '\\'
-                '$' -> '$'
-                else -> null
             }
 
         private fun ValueArgument?.toFirExpression(): FirExpression {
@@ -818,48 +743,11 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
         }
 
         override fun visitSimpleNameExpression(expression: KtSimpleNameExpression, data: Unit): FirElement {
-            return FirPropertyGetImpl(session, expression).apply {
-                calleeReference = FirSimpleMemberReference(
-                    session, expression.getReferencedNameElement(), expression.getReferencedNameAsName()
-                )
-            }
+            return generatePropertyGet(session, expression, expression.getReferencedNameAsName())
         }
 
-        override fun visitConstantExpression(expression: KtConstantExpression, data: Unit): FirElement {
-            val type = expression.node.elementType
-            val text: String = expression.text
-            return when (type) {
-                KtNodeTypes.INTEGER_CONSTANT ->
-                    if (text.last() == 'l' || text.last() == 'L') {
-                        FirConstExpressionImpl(
-                            session, expression, IrConstKind.Long, text.dropLast(1).toLongOrNull(), "Incorrect long: $text"
-                        )
-                    } else {
-                        // TODO: support byte / short
-                        FirConstExpressionImpl(session, expression, IrConstKind.Int, text.toIntOrNull(), "Incorrect int: $text")
-                    }
-                KtNodeTypes.FLOAT_CONSTANT ->
-                    if (text.last() == 'f' || text.last() == 'F') {
-                        FirConstExpressionImpl(
-                            session, expression, IrConstKind.Float, text.dropLast(1).toFloatOrNull(), "Incorrect float: $text"
-                        )
-                    } else {
-                        FirConstExpressionImpl(
-                            session, expression, IrConstKind.Double, text.toDoubleOrNull(), "Incorrect double: $text"
-                        )
-                    }
-                KtNodeTypes.CHARACTER_CONSTANT ->
-                    FirConstExpressionImpl(
-                        session, expression, IrConstKind.Char, text.parseCharacter(), "Incorrect character: $text"
-                    )
-                KtNodeTypes.BOOLEAN_CONSTANT ->
-                    FirConstExpressionImpl(session, expression, IrConstKind.Boolean, text.toBoolean())
-                KtNodeTypes.NULL ->
-                    FirConstExpressionImpl(session, expression, IrConstKind.Null, null)
-                else ->
-                    throw AssertionError("Unknown literal type: $type, $text")
-            }
-        }
+        override fun visitConstantExpression(expression: KtConstantExpression, data: Unit): FirElement =
+            generateConstantExpressionByLiteral(session, expression)
 
         override fun visitStringTemplateExpression(expression: KtStringTemplateExpression, data: Unit): FirElement {
             val sb = StringBuilder()
@@ -895,18 +783,16 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
         private fun KtWhenCondition.toFirWhenCondition(firSubjectExpression: FirExpression): FirExpression {
             return when (this) {
                 is KtWhenConditionWithExpression -> {
-                    val expressionInCondition = expression
                     FirOperatorCallImpl(
                         session,
-                        expressionInCondition,
+                        expression,
                         FirOperation.EQ
                     ).apply {
                         arguments += firSubjectExpression
-                        arguments += expressionInCondition.toFirExpression("No expression in condition with expression")
+                        arguments += expression.toFirExpression("No expression in condition with expression")
                     }
                 }
                 is KtWhenConditionInRange -> {
-                    val rangeExpression = rangeExpression
                     FirOperatorCallImpl(
                         session,
                         rangeExpression,
@@ -978,72 +864,6 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
             }
         }
 
-        private fun IElementType.toBinaryName(): Name? {
-            return OperatorConventions.BINARY_OPERATION_NAMES[this]
-        }
-
-        private fun IElementType.toUnaryName(): Name? {
-            return OperatorConventions.UNARY_OPERATION_NAMES[this]
-        }
-
-        private fun IElementType.toFirOperation(): FirOperation =
-            when (this) {
-                KtTokens.LT -> FirOperation.LT
-                KtTokens.GT -> FirOperation.GT
-                KtTokens.LTEQ -> FirOperation.LT_EQ
-                KtTokens.GTEQ -> FirOperation.GT_EQ
-                KtTokens.EQEQ -> FirOperation.EQ
-                KtTokens.EXCLEQ -> FirOperation.NOT_EQ
-                KtTokens.EQEQEQ -> FirOperation.IDENTITY
-                KtTokens.EXCLEQEQEQ -> FirOperation.NOT_IDENTITY
-                KtTokens.ANDAND -> FirOperation.AND
-                KtTokens.OROR -> FirOperation.OR
-                KtTokens.IN_KEYWORD -> FirOperation.IN
-                KtTokens.NOT_IN -> FirOperation.NOT_IN
-                KtTokens.RANGE -> FirOperation.RANGE
-
-                KtTokens.EQ -> FirOperation.ASSIGN
-                KtTokens.PLUSEQ -> FirOperation.PLUS_ASSIGN
-                KtTokens.MINUSEQ -> FirOperation.MINUS_ASSIGN
-                KtTokens.MULTEQ -> FirOperation.TIMES_ASSIGN
-                KtTokens.DIVEQ -> FirOperation.DIV_ASSIGN
-                KtTokens.PERCEQ -> FirOperation.REM_ASSIGN
-
-                else -> throw AssertionError(this.toString())
-            }
-
-        private fun FirExpression.generateNotNullOrOther(other: FirExpression, caseId: String): FirWhenExpression {
-            val subjectName = Name.special("<$caseId>")
-            val subjectVariable = FirVariableImpl(
-                session, psi, subjectName,
-                FirImplicitTypeImpl(session, psi), false, this
-            )
-            val subjectExpression = FirWhenSubjectExpression(session, psi)
-            return FirWhenExpressionImpl(
-                session, psi, this, subjectVariable
-            ).apply {
-                branches += FirWhenBranchImpl(
-                    session, psi,
-                    FirOperatorCallImpl(session, psi, FirOperation.NOT_EQ).apply {
-                        arguments += subjectExpression
-                        arguments += FirConstExpressionImpl(session, psi, IrConstKind.Null, null)
-                    },
-                    FirSingleExpressionBlock(
-                        session,
-                        FirPropertyGetImpl(session, psi).apply {
-                            calleeReference = FirSimpleMemberReference(
-                                session, psi, subjectName
-                            )
-                        }
-                    )
-                )
-                branches += FirWhenBranchImpl(
-                    session, other.psi, FirElseIfTrueCondition(session, psi),
-                    FirSingleExpressionBlock(session, other)
-                )
-            }
-        }
-
         private fun KtBinaryExpression.elvisToWhen(): FirWhenExpression {
             val rightArgument = right.toFirExpression("No right operand")
             val leftArgument = left.toFirExpression("No left operand")
@@ -1098,42 +918,6 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
             }
         }
 
-        private fun generateIncrementOrDecrementBlock(
-            baseExpression: KtUnaryExpression,
-            argument: KtSimpleNameExpression?,
-            callName: Name,
-            prefix: Boolean
-        ): FirExpression {
-            if (argument == null) return FirErrorExpressionImpl(session, argument, "Inc/dec without operand")
-            return FirBlockImpl(session, baseExpression).apply {
-                val tempName = Name.special("<unary>")
-                val argumentName = argument.getReferencedNameAsName()
-                statements += FirVariableImpl(
-                    session, baseExpression, tempName,
-                    FirImplicitTypeImpl(session, baseExpression),
-                    false,
-                    FirPropertyGetImpl(session, argument).apply {
-                        this.calleeReference = FirSimpleMemberReference(session, argument, argumentName)
-                    }
-                )
-                statements += FirPropertySetImpl(
-                    session, baseExpression,
-                    FirFunctionCallImpl(session, baseExpression).apply {
-                        this.calleeReference = FirSimpleMemberReference(session, baseExpression.operationReference, callName)
-                        this.arguments += FirPropertyGetImpl(session, baseExpression).apply {
-                            this.calleeReference = FirSimpleMemberReference(session, baseExpression, tempName)
-                        }
-                    },
-                    FirOperation.ASSIGN
-                ).apply {
-                    this.calleeReference = FirSimpleMemberReference(session, argument, argumentName)
-                }
-                statements += FirPropertyGetImpl(session, baseExpression).apply {
-                    this.calleeReference = FirSimpleMemberReference(session, baseExpression, if (prefix) argumentName else tempName)
-                }
-            }
-        }
-
         override fun visitUnaryExpression(expression: KtUnaryExpression, data: Unit): FirElement {
             val operationToken = expression.operationToken
             val argument = expression.baseExpression
@@ -1144,7 +928,7 @@ class RawFirBuilder(val session: FirSession, val stubMode: Boolean) {
             return if (conventionCallName != null) {
                 if (operationToken in OperatorConventions.INCREMENT_OPERATIONS) {
                     return generateIncrementOrDecrementBlock(
-                        expression, argument as? KtSimpleNameExpression,
+                        session, expression, argument as? KtSimpleNameExpression,
                         callName = conventionCallName,
                         prefix = expression is KtPrefixExpression
                     )
